@@ -25,6 +25,7 @@ public class HeroUnit : MonoBehaviour
         }
 
         currentHp = Mathf.Max(currentHp - amount, 0f);
+        DamagePopup.ShowDamage(transform.position, amount);
 
         if (!IsAlive && !defeatLogged)
         {
