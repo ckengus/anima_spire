@@ -1,7 +1,9 @@
+using System.Collections;
 using UnityEngine;
 
 public class CombatManager : MonoBehaviour
 {
+    [SerializeField] private GameManager gameManager;
     [SerializeField] private HeroUnit hero;
     [SerializeField] private SpiritUnit spirit;
     [SerializeField] private EnemyUnit enemy;
@@ -9,6 +11,7 @@ public class CombatManager : MonoBehaviour
     private float heroAttackTimer;
     private float spiritAttackTimer;
     private float enemyAttackTimer;
+    private bool isResolvingEnemyDefeat;
 
     private void Start()
     {
@@ -17,27 +20,35 @@ public class CombatManager : MonoBehaviour
 
     private void Update()
     {
-        if (hero == null || spirit == null || enemy == null)
+        if (gameManager == null || hero == null || spirit == null || enemy == null)
         {
             return;
         }
 
-        if (hero.IsAlive && enemy.IsAlive)
+        if (isResolvingEnemyDefeat || !hero.IsAlive || !enemy.IsAlive)
         {
-            heroAttackTimer += Time.deltaTime;
-            spiritAttackTimer += Time.deltaTime;
-
-            if (heroAttackTimer >= hero.castInterval)
+            if (!isResolvingEnemyDefeat && !enemy.IsAlive)
             {
-                heroAttackTimer = 0f;
-                hero.DealDamage(enemy);
+                isResolvingEnemyDefeat = true;
+                StartCoroutine(RewardGoldAndResetCombat());
             }
 
-            if (spiritAttackTimer >= spirit.castInterval)
-            {
-                spiritAttackTimer = 0f;
-                spirit.DealDamage(enemy);
-            }
+            return;
+        }
+
+        heroAttackTimer += Time.deltaTime;
+        spiritAttackTimer += Time.deltaTime;
+
+        if (heroAttackTimer >= hero.castInterval)
+        {
+            heroAttackTimer = 0f;
+            hero.DealDamage(enemy);
+        }
+
+        if (spiritAttackTimer >= spirit.castInterval)
+        {
+            spiritAttackTimer = 0f;
+            spirit.DealDamage(enemy);
         }
 
         if (enemy.IsAlive && hero.IsAlive)
@@ -50,5 +61,25 @@ public class CombatManager : MonoBehaviour
                 enemy.DealDamage(hero);
             }
         }
+    }
+
+    private IEnumerator RewardGoldAndResetCombat()
+    {
+        isResolvingEnemyDefeat = true;
+        gameManager.AddGold(enemy.goldReward);
+
+        yield return new WaitForSeconds(1f);
+
+        hero.ResetHp();
+        enemy.ResetHp();
+        ResetAttackTimers();
+        isResolvingEnemyDefeat = false;
+    }
+
+    private void ResetAttackTimers()
+    {
+        heroAttackTimer = 0f;
+        spiritAttackTimer = 0f;
+        enemyAttackTimer = 0f;
     }
 }

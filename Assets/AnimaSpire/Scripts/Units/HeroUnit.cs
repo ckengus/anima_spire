@@ -33,6 +33,12 @@ public class HeroUnit : MonoBehaviour
         }
     }
 
+    public void ResetHp()
+    {
+        currentHp = maxHp;
+        defeatLogged = false;
+    }
+
     public void DealDamage(EnemyUnit target)
     {
         if (!IsAlive || target == null || !target.IsAlive)

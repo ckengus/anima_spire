@@ -9,6 +9,7 @@ public class EnemyUnit : MonoBehaviour
     public float attackInterval = 2.0f;
     public bool isRanged = false;
     public bool isBoss = false;
+    public int goldReward = 10;
 
     private bool defeatLogged;
 
@@ -33,6 +34,12 @@ public class EnemyUnit : MonoBehaviour
             defeatLogged = true;
             Debug.Log("Enemy defeated.");
         }
+    }
+
+    public void ResetHp()
+    {
+        currentHp = maxHp;
+        defeatLogged = false;
     }
 
     public void DealDamage(HeroUnit target)
