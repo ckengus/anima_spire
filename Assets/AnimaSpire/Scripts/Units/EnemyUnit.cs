@@ -43,6 +43,13 @@ public class EnemyUnit : MonoBehaviour
         defeatLogged = false;
     }
 
+    public void ApplyStats(float newMaxHp, float newAttackPower)
+    {
+        maxHp = Mathf.Max(newMaxHp, 1f);
+        attackPower = Mathf.Max(newAttackPower, 0f);
+        ResetHp();
+    }
+
     public void DealDamage(HeroUnit target)
     {
         if (!IsAlive || target == null || !target.IsAlive)

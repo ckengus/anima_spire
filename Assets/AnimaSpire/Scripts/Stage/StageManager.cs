@@ -6,6 +6,10 @@ public class StageManager : MonoBehaviour
     [SerializeField] private int currentStage = 1;
     [SerializeField] private int maxStagePerArea = 10;
 
+    public int CurrentArea => currentArea;
+    public int CurrentStage => currentStage;
+    public int MaxStagePerArea => maxStagePerArea;
+
     private void Start()
     {
         Debug.Log($"Stage: {GetCurrentStageLogLabel()}");

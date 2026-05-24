@@ -5,6 +5,7 @@ public class CombatManager : MonoBehaviour
 {
     [SerializeField] private GameManager gameManager;
     [SerializeField] private StageManager stageManager;
+    [SerializeField] private StageDifficultyCalculator stageDifficultyCalculator;
     [SerializeField] private HeroUnit hero;
     [SerializeField] private SpiritUnit spirit;
     [SerializeField] private EnemyUnit enemy;
@@ -21,6 +22,12 @@ public class CombatManager : MonoBehaviour
             stageManager = FindAnyObjectByType<StageManager>();
         }
 
+        if (stageDifficultyCalculator == null)
+        {
+            stageDifficultyCalculator = FindAnyObjectByType<StageDifficultyCalculator>();
+        }
+
+        ApplyCurrentStageEnemyStats();
         Debug.Log("CombatManager initialized.");
     }
 
@@ -78,9 +85,24 @@ public class CombatManager : MonoBehaviour
         yield return new WaitForSeconds(1f);
 
         hero.ResetHp();
-        enemy.ResetHp();
+        ApplyCurrentStageEnemyStats();
         ResetAttackTimers();
         isResolvingEnemyDefeat = false;
+    }
+
+    private void ApplyCurrentStageEnemyStats()
+    {
+        if (stageManager == null || stageDifficultyCalculator == null || enemy == null)
+        {
+            enemy?.ResetHp();
+            return;
+        }
+
+        EnemyStageStats enemyStats = stageDifficultyCalculator.CalculateEnemyStats(
+            stageManager.CurrentArea,
+            stageManager.CurrentStage,
+            stageManager.MaxStagePerArea);
+        enemy.ApplyStats(enemyStats.MaxHp, enemyStats.AttackPower);
     }
 
     private void ResetAttackTimers()
