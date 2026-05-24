@@ -10,8 +10,39 @@ public class EnemyUnit : MonoBehaviour
     public bool isRanged = false;
     public bool isBoss = false;
 
+    private bool defeatLogged;
+
+    public bool IsAlive => currentHp > 0f;
+
     private void Start()
     {
         Debug.Log($"EnemyUnit stats - Name: {enemyName}, HP: {currentHp}/{maxHp}, Attack Power: {attackPower}, Attack Interval: {attackInterval}, Ranged: {isRanged}, Boss: {isBoss}");
+    }
+
+    public void TakeDamage(float amount)
+    {
+        if (!IsAlive)
+        {
+            return;
+        }
+
+        currentHp = Mathf.Max(currentHp - amount, 0f);
+
+        if (!IsAlive && !defeatLogged)
+        {
+            defeatLogged = true;
+            Debug.Log("Enemy defeated.");
+        }
+    }
+
+    public void DealDamage(HeroUnit target)
+    {
+        if (!IsAlive || target == null || !target.IsAlive)
+        {
+            return;
+        }
+
+        target.TakeDamage(attackPower);
+        Debug.Log($"Enemy dealt {attackPower} damage. Hero HP: {target.currentHp}/{target.maxHp}");
     }
 }

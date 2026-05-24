@@ -11,4 +11,15 @@ public class SpiritUnit : MonoBehaviour
     {
         Debug.Log($"SpiritUnit stats - Name: {spiritName}, Attack: {spiritAttack}, Cast Interval: {castInterval}, Role: {roleType}");
     }
+
+    public void DealDamage(EnemyUnit target)
+    {
+        if (target == null || !target.IsAlive)
+        {
+            return;
+        }
+
+        target.TakeDamage(spiritAttack);
+        Debug.Log($"Spirit dealt {spiritAttack} damage. Enemy HP: {target.currentHp}/{target.maxHp}");
+    }
 }
