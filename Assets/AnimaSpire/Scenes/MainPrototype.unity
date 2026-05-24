@@ -492,6 +492,7 @@ GameObject:
   m_Component:
   - component: {fileID: 100000031}
   - component: {fileID: 100000032}
+  - component: {fileID: 100000033}
   m_Layer: 0
   m_Name: Hero_Placeholder
   m_TagString: Untagged
@@ -569,6 +570,23 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &100000033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000030}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cf36ed6b6d64c7499852f57a297c3d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  unitName: Hero
+  maxHp: 100
+  currentHp: 100
+  magicAttack: 10
+  castInterval: 2.5
 --- !u!1 &100000100
 GameObject:
   m_ObjectHideFlags: 0
@@ -987,6 +1005,7 @@ GameObject:
   m_Component:
   - component: {fileID: 100000041}
   - component: {fileID: 100000042}
+  - component: {fileID: 100000043}
   m_Layer: 0
   m_Name: Spirit_Placeholder
   m_TagString: Untagged
@@ -1064,6 +1083,22 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &100000043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000040}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f43d3c588da049d4b9f32a9bc5d8c2e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spiritName: Spirit
+  spiritAttack: 8
+  castInterval: 3
+  roleType: SupportAttack
 --- !u!1 &100000050
 GameObject:
   m_ObjectHideFlags: 0
@@ -1074,6 +1109,7 @@ GameObject:
   m_Component:
   - component: {fileID: 100000051}
   - component: {fileID: 100000052}
+  - component: {fileID: 100000053}
   m_Layer: 0
   m_Name: Enemy_Placeholder
   m_TagString: Untagged
@@ -1151,3 +1187,22 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &100000053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000050}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92b14fae4b294a54a0e0b7d393ff7a61, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enemyName: Enemy
+  maxHp: 50
+  currentHp: 50
+  attackPower: 5
+  attackInterval: 2
+  isRanged: 0
+  isBoss: 0
