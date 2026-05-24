@@ -8,12 +8,27 @@ public class StageManager : MonoBehaviour
 
     private void Start()
     {
-        Debug.Log($"Stage: {GetCurrentStageLabel()}");
+        Debug.Log($"Stage: {GetCurrentStageLogLabel()}");
     }
 
     public string GetCurrentStageLabel()
     {
         return $"{currentArea}-{currentStage}";
+    }
+
+    public bool IsBossStage()
+    {
+        return currentStage == maxStagePerArea;
+    }
+
+    public string GetCurrentStageLogLabel()
+    {
+        if (IsBossStage())
+        {
+            return $"{GetCurrentStageLabel()} (Boss)";
+        }
+
+        return GetCurrentStageLabel();
     }
 
     public void AdvanceStage()
@@ -26,6 +41,6 @@ public class StageManager : MonoBehaviour
             currentStage = 1;
         }
 
-        Debug.Log($"Stage: {GetCurrentStageLabel()}");
+        Debug.Log($"Stage: {GetCurrentStageLogLabel()}");
     }
 }
