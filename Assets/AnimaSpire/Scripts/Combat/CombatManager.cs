@@ -4,6 +4,7 @@ using UnityEngine;
 public class CombatManager : MonoBehaviour
 {
     [SerializeField] private GameManager gameManager;
+    [SerializeField] private StageManager stageManager;
     [SerializeField] private HeroUnit hero;
     [SerializeField] private SpiritUnit spirit;
     [SerializeField] private EnemyUnit enemy;
@@ -15,6 +16,11 @@ public class CombatManager : MonoBehaviour
 
     private void Start()
     {
+        if (stageManager == null)
+        {
+            stageManager = FindAnyObjectByType<StageManager>();
+        }
+
         Debug.Log("CombatManager initialized.");
     }
 
@@ -67,6 +73,7 @@ public class CombatManager : MonoBehaviour
     {
         isResolvingEnemyDefeat = true;
         gameManager.AddGold(enemy.goldReward);
+        stageManager?.AdvanceStage();
 
         yield return new WaitForSeconds(1f);
 
