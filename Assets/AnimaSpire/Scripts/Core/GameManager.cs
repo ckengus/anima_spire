@@ -15,6 +15,12 @@ public class GameManager : MonoBehaviour
         Debug.Log($"Gold: {gold}");
     }
 
+    public void SetGoldForLoad(int loadedGold)
+    {
+        gold = Mathf.Max(loadedGold, 0);
+        Debug.Log($"Gold loaded: {gold}");
+    }
+
     public bool TrySpendGold(int amount)
     {
         if (amount <= 0)

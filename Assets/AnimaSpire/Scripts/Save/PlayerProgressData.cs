@@ -5,8 +5,8 @@ using System.Collections.Generic;
 public sealed class PlayerProgressData
 {
     public int dataVersion;
-    public int currentArea;
-    public int currentStage;
+    public int lastClearedArea;
+    public int lastClearedStage;
     public int gold;
     public List<EquipmentSaveData> ownedEquipment;
     public string equippedMagicBookKey;
@@ -16,8 +16,8 @@ public sealed class PlayerProgressData
         return new PlayerProgressData
         {
             dataVersion = 1,
-            currentArea = 1,
-            currentStage = 1,
+            lastClearedArea = 1,
+            lastClearedStage = 0,
             gold = 0,
             ownedEquipment = new List<EquipmentSaveData>(),
             equippedMagicBookKey = string.Empty

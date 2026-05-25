@@ -48,6 +48,13 @@ public class StageManager : MonoBehaviour
         Debug.Log($"Stage: {GetCurrentStageLogLabel()}");
     }
 
+    public void SetStageForLoad(int area, int stage)
+    {
+        currentArea = Mathf.Max(area, 1);
+        currentStage = Mathf.Clamp(stage, 1, maxStagePerArea);
+        Debug.Log($"Stage loaded: {GetCurrentStageLogLabel()}");
+    }
+
     public void RetreatStageOnFailure()
     {
         if (currentStage > 1)

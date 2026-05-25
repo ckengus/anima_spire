@@ -172,14 +172,7 @@ public class MainTabController : MonoBehaviour
             return;
         }
 
-        equipmentManager = FindAnyObjectByType<EquipmentManager>();
-        if (equipmentManager != null)
-        {
-            return;
-        }
-
-        GameObject managerObject = new GameObject("EquipmentManager", typeof(EquipmentManager));
-        equipmentManager = managerObject.GetComponent<EquipmentManager>();
+        equipmentManager = EquipmentManager.EnsureInstance();
     }
 
     private void EnsureEquipmentPanelController()

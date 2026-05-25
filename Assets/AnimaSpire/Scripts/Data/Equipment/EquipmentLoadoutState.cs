@@ -12,6 +12,12 @@ public sealed class EquipmentLoadoutState
         OnEquippedMagicBookChanged?.Invoke(equippedMagicBook);
     }
 
+    public void SetEquippedMagicBookForLoad(EquipmentStackKey? key)
+    {
+        equippedMagicBook = key;
+        OnEquippedMagicBookChanged?.Invoke(equippedMagicBook);
+    }
+
     public bool HasEquippedMagicBook()
     {
         return equippedMagicBook.HasValue;

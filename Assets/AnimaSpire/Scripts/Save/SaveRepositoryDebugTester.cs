@@ -46,8 +46,8 @@ public sealed class SaveRepositoryDebugTester : MonoBehaviour
     {
         PlayerProgressData data = PlayerProgressData.CreateDefault();
         data.dataVersion = 1;
-        data.currentArea = 1;
-        data.currentStage = 8;
+        data.lastClearedArea = 1;
+        data.lastClearedStage = 7;
         data.gold = 123;
         data.ownedEquipment.Add(new EquipmentSaveData("AMagicBook", "T0", 2));
         data.ownedEquipment.Add(new EquipmentSaveData("BMagicBook", "T0", 1));
@@ -66,6 +66,6 @@ public sealed class SaveRepositoryDebugTester : MonoBehaviour
             ? "null"
             : string.Join(", ", data.ownedEquipment.ConvertAll(item => $"{item.id}:{item.tier} x{item.count}"));
 
-        return $"Loaded progress data: dataVersion={data.dataVersion}, currentArea={data.currentArea}, currentStage={data.currentStage}, gold={data.gold}, ownedEquipment=[{equipmentText}], equippedMagicBookKey={data.equippedMagicBookKey}";
+        return $"Loaded progress data: dataVersion={data.dataVersion}, lastClearedArea={data.lastClearedArea}, lastClearedStage={data.lastClearedStage}, gold={data.gold}, ownedEquipment=[{equipmentText}], equippedMagicBookKey={data.equippedMagicBookKey}";
     }
 }

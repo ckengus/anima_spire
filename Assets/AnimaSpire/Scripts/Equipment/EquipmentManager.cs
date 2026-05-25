@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class EquipmentManager : MonoBehaviour
 {
@@ -14,8 +15,32 @@ public class EquipmentManager : MonoBehaviour
     public EquipmentCollectionState CollectionState => collectionState;
     public EquipmentLoadoutState LoadoutState => loadoutState;
 
+    public static EquipmentManager EnsureInstance()
+    {
+        if (Instance != null)
+        {
+            return Instance;
+        }
+
+        EquipmentManager found = FindAnyObjectByType<EquipmentManager>();
+        if (found != null)
+        {
+            Instance = found;
+            return Instance;
+        }
+
+        GameObject managerObject = new GameObject("EquipmentManager");
+        return managerObject.AddComponent<EquipmentManager>();
+    }
+
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning("Duplicate EquipmentManager found. Using the first instance.");
+            return;
+        }
+
         Instance = this;
 
         if (gameManager == null)
@@ -100,6 +125,23 @@ public class EquipmentManager : MonoBehaviour
     public bool TryGetEquippedMagicBook(out EquipmentStackKey key)
     {
         return loadoutState.TryGetEquippedMagicBook(out key);
+    }
+
+    public void ReplaceOwnedStacksForLoad(IEnumerable<KeyValuePair<EquipmentStackKey, int>> stacks)
+    {
+        collectionState.ReplaceOwnedStacksForLoad(stacks);
+    }
+
+    public void SetEquippedMagicBookForLoad(EquipmentStackKey? key)
+    {
+        if (key.HasValue && !collectionState.HasOwned(key.Value.id, key.Value.tier))
+        {
+            Debug.LogWarning($"Cannot equip unloaded MagicBook for load: {key.Value.id}:{key.Value.tier}");
+            loadoutState.SetEquippedMagicBookForLoad(null);
+            return;
+        }
+
+        loadoutState.SetEquippedMagicBookForLoad(key);
     }
 
     public int GetEquippedMagicBookBonusAttackPower()

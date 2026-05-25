@@ -17,15 +17,7 @@ public class CombatManager : MonoBehaviour
 
     private void Start()
     {
-        if (stageManager == null)
-        {
-            stageManager = FindAnyObjectByType<StageManager>();
-        }
-
-        if (stageDifficultyCalculator == null)
-        {
-            stageDifficultyCalculator = FindAnyObjectByType<StageDifficultyCalculator>();
-        }
+        EnsureReferences();
 
         ApplyCurrentStageEnemyStats();
         Debug.Log("CombatManager initialized.");
@@ -114,6 +106,50 @@ public class CombatManager : MonoBehaviour
         ApplyCurrentStageEnemyStats();
         ResetAttackTimers();
         isResolvingCombat = false;
+    }
+
+    public void RestartCombatForLoadedProgress()
+    {
+        EnsureReferences();
+        StopAllCoroutines();
+        isResolvingCombat = false;
+        hero?.ResetHp();
+        ApplyCurrentStageEnemyStats();
+        ResetAttackTimers();
+        Debug.Log("Combat restarted for loaded progress.");
+    }
+
+    private void EnsureReferences()
+    {
+        if (gameManager == null)
+        {
+            gameManager = FindAnyObjectByType<GameManager>();
+        }
+
+        if (stageManager == null)
+        {
+            stageManager = FindAnyObjectByType<StageManager>();
+        }
+
+        if (stageDifficultyCalculator == null)
+        {
+            stageDifficultyCalculator = FindAnyObjectByType<StageDifficultyCalculator>();
+        }
+
+        if (hero == null)
+        {
+            hero = FindAnyObjectByType<HeroUnit>();
+        }
+
+        if (spirit == null)
+        {
+            spirit = FindAnyObjectByType<SpiritUnit>();
+        }
+
+        if (enemy == null)
+        {
+            enemy = FindAnyObjectByType<EnemyUnit>();
+        }
     }
 
     private void ApplyCurrentStageEnemyStats()
