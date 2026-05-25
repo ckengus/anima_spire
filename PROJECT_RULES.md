@@ -1,10 +1,24 @@
-# Anima Spire Project Rules v0.3
+# Anima Spire Project Rules v0.4
 
 ## Project Overview
 Anima Spire is a 2D idle RPG prototype made in Unity 6000.4.8f1.
 
 The current goal is not to build the full game.
 The current goal is to build the smallest playable combat and growth loop.
+
+Anima Spire's core fun is not infinite repetition by itself.
+The core loop is that enemies grow stronger, the player gets blocked, and the player breaks through again through growth, setup, and strategy.
+All level design and growth systems should support making this loop sustainable.
+
+Core MVP loop:
+
+- Enemy gets stronger.
+- Player eventually gets blocked.
+- Player farms previous cleared or repeatable Stage.
+- Player grows through equipment and other growth systems.
+- Player breaks through the blocked Stage.
+- Player reaches a higher wall.
+- The loop repeats.
 
 ## Development Premise
 - The project owner is a non-programmer using AI coding tools.
@@ -21,7 +35,11 @@ Build the smallest playable loop:
 - Enemy attacks Hero.
 - Enemy takes damage and dies.
 - Gold increases when Enemy dies.
-- After a short delay, Hero and Enemy recover.
+- Stage advances when Enemy dies.
+- Enemy grows stronger as Stage increases.
+- Hero eventually fails against stronger Enemy.
+- Failed Stage falls back to a previous Stage when allowed.
+- Hero and Enemy recover after success or failure.
 - The same combat repeats.
 
 Do not build the full game at once.
@@ -84,21 +102,42 @@ Implemented:
 - Basic automatic attack loop
 - Hero and Spirit attack Enemy
 - Enemy attacks Hero
+- Spirit has no HP
+- Spirit is not an enemy attack target
 - Gold reward when Enemy is defeated
 - StageManager manages current stage
-- Stage starts at 1-1 and advances after Enemy defeat
+- Stage starts at 1-1
+- Enemy defeat advances Stage
 - X-10 stages are marked as Boss stages
 - HeaderPanel displays current Stage and Gold
 - HeaderPanel shows Boss label when current stage is a boss stage
-- Hero and Enemy recover after 1 second
-- Same combat repeats
-- Spirit has no HP and is not an enemy target
-- Current latest completed implementation includes Header Stage / Gold UI
+- Hero HP text is displayed in InfoPanel
+- Hero overhead HP bar
+- Enemy overhead HP bar
+- Damage Popup UI
+- StageDifficultyCalculator
+- Enemy maxHp and attackPower scale by current Stage
+- Hero defeat causes Stage failure
+- Stage failure retreats to previous Stage when `currentStage > 1`
+- X-1 failure does not retreat to the previous Area
+- Stage failure does not give Gold
+- Stage failure does not advance Stage
+- After failure, Hero and Enemy recover and combat restarts
+- Current MVP loop supports enemy scaling, player blocking, failed Stage fallback, and farming previous Stage
 
 Not implemented:
 
-- Upgrade button
+- Battle / Equipment tab switching
 - Equipment system
+- MagicBook summon
+- MagicBook equip
+- Equipment collection state
+- Equipment synthesis
+- Equipment disassembly
+- Equipment slot upgrade
+- Equipment fixed options
+- Equipment random options
+- Equipment detail page
 - Spirit menu
 - Spirit stones
 - Save system
@@ -107,39 +146,40 @@ Not implemented:
 - In-app purchases
 - PVP
 - Guilds
+- Clan
+- Co-op
+- Networking
 
 ## Currency Rules
 Gold:
 
-- Korean name: 골드
-- Main use: equipment crafting, equipment draw, equipment upgrade
-- Main source: normal combat, enemy defeat, offline reward
-- Currently implemented as the first MVP currency
+- Main use: equipment summon and future equipment slot upgrade.
+- Main source: normal combat and enemy defeat.
+- Currently implemented as the first MVP currency.
+- Gold is not currently used for a direct Hero attack upgrade button.
+- Gold is not currently used for save system, offline reward, ads, or monetization.
 
 Nature Essence:
 
-- Korean name: 자연력
-- Main use: spirit summon, spirit growth
-- Main source: boss reward, spirit sanctuary, spirit missions, spirit refund
-- Not implemented yet
+- Main use: spirit summon and spirit growth.
+- Main source: boss reward, spirit sanctuary, spirit missions, and spirit refund.
+- Not implemented yet.
 
 Spiritstone Shard:
 
-- Korean name: 정령석 파편
-- Main use: spirit stone refining, spirit stone synthesis, spirit stone upgrade
-- Main source: spirit stone dungeon, special enemies, boss reward, spirit stone dismantle, spirit stone altar
-- Not implemented yet
+- Main use: spirit stone refining, spirit stone synthesis, and spirit stone upgrade.
+- Main source: spirit stone dungeon, special enemies, boss reward, spirit stone dismantle, and spirit stone altar.
+- Not implemented yet.
 
 Spire Stone:
 
-- Korean name: 첨탑석
-- Main use: village building upgrade
-- Main source: first boss clear, area breakthrough reward, village expedition, long-term missions
-- Not implemented yet
+- Main use: village building upgrade.
+- Main source: first boss clear, area breakthrough reward, village expedition, and long-term missions.
+- Not implemented yet.
 
 ## Currency Unlock Order
 1. Gold only
-2. Gold is used for equipment crafting and basic growth
+2. Gold is used for equipment summon and future equipment slot upgrade
 3. Nature Essence is added when spirit system is unlocked
 4. Spiritstone Shard is added when spirit stone system is unlocked
 5. Spire Stone is added when village system is unlocked
@@ -154,6 +194,111 @@ Spire Stone:
 - Spiritstone Shard is not included in the basic offline reward.
 - Spire Stone is not included in the basic offline reward.
 - Spiritstone Shard and Spire Stone should come from their own content sources such as dungeons, boss first clears, village buildings, expeditions, or missions.
+- Offline rewards are not implemented in the MVP.
+
+## Equipment Direction
+Equipment is the next MVP growth direction.
+The previous direct Gold-to-Hero-attack Upgrade Attack button is no longer the next development priority.
+Direct Hero attack upgrade is deprecated for now or moved to a lower priority.
+
+Equipment uses a collection-style equipment structure.
+Equipment is not an infinite inventory of duplicated individual option items.
+Instead, each equipment detail page should eventually manage owned quantities by tier and accumulated option state.
+
+Example:
+
+A MagicBook
+
+- T0 owned count
+- T1 owned count
+- T2 owned count
+- equipped or not
+- future fixed option best values
+- future random option bank
+- future active random option
+
+## Equipment Types
+All 8 equipment types should use one shared equipment system.
+Only MagicBook is implemented in the first equipment MVP.
+The other 7 equipment types are future content.
+
+Attack equipment:
+
+- MagicBook
+- Necklace
+- Ring
+- Belt
+
+Defense / HP equipment:
+
+- Hat
+- Robe
+- Gloves
+- Shoes
+
+## Equipment Tier Rules
+- Equipment has tier.
+- Equipment does not have individual item level.
+- Same equipment and same tier can be collected in quantity.
+- Future synthesis uses same equipment and same tier quantity to create a higher tier.
+- MVP does not implement synthesis yet.
+
+## Equipment Slot Upgrade Rules
+- Equipment slot upgrade is a future system.
+- Slot upgrade uses Gold.
+- Slot upgrade provides fixed, predictable growth.
+- Slot upgrade cost increases as level rises.
+- Gold can be spent either on equipment summon or equipment slot upgrade in the future.
+- MVP does not implement slot upgrade yet.
+
+## Equipment Option Direction
+Each equipment may have fixed options and random options in the future.
+However, random options are not stored per individual duplicated item.
+Instead, each equipment detail page manages accumulated unlocked options.
+
+Fixed option concept:
+
+- Fixed options represent the identity of the equipment.
+- Example: A MagicBook may have bonus attack or Firebolt-related fixed effect.
+- Future design may apply the best fixed option value ever obtained for that equipment.
+- MVP does not implement fixed option best value yet.
+
+Random option concept:
+
+- When summoning equipment, random option candidates may appear in the future.
+- Player can save a limited number of desired options into that equipment's option bank.
+- Player can activate a limited number of saved options.
+- Example:
+  - A MagicBook random option bank:
+    - Attack Speed +24%
+    - Critical Rate +7%
+    - Critical Damage +35%
+  - Active option: Critical Rate +7%
+- If a better option appears later, the player can replace one saved option.
+- MVP does not implement random option bank, active option, option reroll, option replacement, or equipment detail page yet.
+
+## MagicBook MVP Scope
+For the first equipment MVP:
+
+- Only MagicBook category is implemented.
+- A MagicBook and B MagicBook exist.
+- Summon result is A or B with 50% / 50% probability.
+- Only T0 appears.
+- Player can own A/B MagicBook counts.
+- Player can equip A or B MagicBook.
+- Equipped MagicBook affects Hero attack power or skill damage.
+- Verify blocked Stage can be broken through after equipment growth.
+
+Not included in the first MagicBook MVP:
+
+- Synthesis
+- Disassembly
+- Slot upgrade
+- Random options
+- Fixed option best value
+- Equipment detail page
+- Full 8 equipment type UI
+- Save/load
 
 ## Skill and Mana Rules
 - The game does not use Mana.
@@ -168,15 +313,18 @@ Spire Stone:
 - If Auto is OFF, the skill can be manually activated by the player when ready.
 - Healing, defense, shield, and buff skills may use conditional auto logic in the future.
   - Example: use heal only when Hero HP is below a defined threshold.
+- MVP does not implement skill UI, auto/semi-auto/manual skill modes, or action algorithms yet.
 
 ## HP UI Rules
 - Hero has HP.
 - Enemy has HP.
 - Spirit has no HP.
 - Spirit must not display an HP bar.
-- Hero HP should be displayed in InfoPanel or a dedicated Hero HP area.
+- Hero HP is displayed in InfoPanel.
+- Hero HP is displayed with an overhead HP bar.
+- Enemy HP is displayed above the Enemy unit.
 - Enemy HP should be displayed above each Enemy unit because multiple enemies may appear in future stages.
-- If multiple enemies exist, each Enemy must have its own HP bar.
+- If multiple enemies exist in the future, each Enemy must have its own HP bar.
 - Do not implement a single shared Enemy HP display as the long-term structure.
 
 ## Ally Skill UI Rules
@@ -191,6 +339,7 @@ Spire Stone:
   - recommended: radial or dark overlay plus remaining seconds in the center
 - Ally skill icons are not only passive indicators.
 - They should eventually support Auto ON/OFF toggle and manual activation.
+- Ally skill UI is not implemented in the current MVP.
 
 ## Damage UI Rules
 - Damage numbers should appear above the damaged unit.
@@ -216,7 +365,14 @@ Damage Number Style Rules:
 
 ## Future Combat Expansion Rules
 - Current combat is still a simple single Enemy prototype.
-- Future combat should support:
+- Current MVP uses simple direct damage with Hero/Spirit on the left and Enemy on the right.
+- Future combat may consider:
+  - top-view 2D combat
+  - enemies appearing from different directions
+  - automatic movement
+  - action algorithms
+  - targeting priorities
+  - auto / semi-auto / manual skill usage
   - multiple enemies
   - melee enemies
   - ranged enemies
@@ -224,31 +380,75 @@ Damage Number Style Rules:
   - Hero and enemies starting from opposite sides
   - movement based on position and range
   - attack range
-  - targeting rules
   - projectile movement
   - damage application when projectile reaches target
-- Do not implement these systems until explicitly requested.
+- Anima Spire is not a direct movement-control action RPG.
+- Long-term movement should be automatic based on configured action algorithms or strategy presets.
+- Do not implement top-view combat, movement, range, projectiles, collisions, or multiple enemies in the current MVP.
 - Current simple direct damage structure should not be rewritten into a complex projectile or collision system yet.
-- However, future code changes should avoid hardcoding that blocks multi-enemy, range, targeting, or projectile expansion.
+- However, future code changes should avoid hardcoding that blocks multi-enemy, range, targeting, movement, or projectile expansion.
+
+## Story Direction
+Anima Spire is not a heavy long-form story RPG.
+It should aim for light narrative and a strong world atmosphere.
+
+- MVP does not implement cutscenes.
+- MVP does not implement long dialogue.
+- MVP does not implement complex scenario systems.
+- Long-term atmosphere can come from area names, boss names, spirit descriptions, first-clear messages, and memory fragments.
+
+## PVP / Guild Long-Term Direction
+PVP, guild, clan, and cooperative content are long-term candidates only.
+MVP must not implement them.
+
+Long-term content candidates:
+
+- personal PVE stage climbing
+- personal challenge content
+- cooperative PVE
+- guild / clan
+- guild PVE
+- personal PVP
+- guild or clan PVP
+
+PVP Arena long-term candidate:
+
+1. Growth-reflecting arena
+   - uses the player's actual growth
+   - seasonal matching by similar combat power
+2. Fair draft arena
+   - fixed tier / normalized equipment, spirits, and spiritstones
+   - ban/pick system
+   - strategy-focused
+   - not MVP
 
 ## Strict Rules
 - Do not add systems that were not requested.
 - Do not add monetization.
 - Do not add ads.
+- Do not add in-app purchases.
 - Do not add PVP.
 - Do not add guilds.
+- Do not add clan.
+- Do not add co-op.
+- Do not add networking or server features.
 - Do not add inventory systems unless explicitly requested.
-- Do not add save systems unless explicitly requested.
+- Do not add save/load systems unless explicitly requested.
 - Do not add save or offline reward systems until explicitly requested.
-- Do not add equipment random options.
+- Do not add equipment synthesis yet.
+- Do not add equipment disassembly yet.
+- Do not add equipment slot upgrade yet.
+- Do not add equipment random options yet.
+- Do not add equipment detail page yet.
 - Do not add spirit stones yet.
-- Do not add spirit stones, village systems, ads, in-app purchases, PVP, or guilds yet.
+- Do not add spirit stones or village systems yet.
 - Do not add Mana, MP, Energy, or skill cost systems unless explicitly requested.
 - Do not add Spirit HP.
 - Do not display Spirit HP bars.
-- Do not add multi-enemy, range, projectile, or collision systems until explicitly requested.
+- Do not make Spirit an enemy attack target.
+- Do not add multi-enemy, range, movement, projectile, or collision systems until explicitly requested.
 - Do not add complex status effects yet.
-- Do not add networking or server features.
+- Do not modify `SampleScene`.
 - Do not introduce external packages unless explicitly requested.
 - Do not make large `ProjectSettings` changes unless explicitly requested.
 
@@ -258,6 +458,18 @@ Damage Number Style Rules:
 - Use placeholder sprites or simple Unity objects first.
 - Do not optimize prematurely.
 - Keep changes scoped to the requested task.
+- MVP features must be small.
+- However, code should avoid hardcoding that blocks future expansion.
+- Keep responsibilities separated.
+- Equipment data, inventory/collection state, UI, and Hero stat calculation should not be tightly coupled.
+- For equipment MVP, do not implement all future systems at once.
+- Build equipment MVP in small steps:
+  1. Battle / Equipment tab
+  2. MagicBook data
+  3. MagicBook summon
+  4. MagicBook owned count display
+  5. MagicBook equip
+  6. Hero stat reflection
 - After each change, explain:
   1. what files were created,
   2. what files were modified,
@@ -265,11 +477,18 @@ Damage Number Style Rules:
   4. what remains incomplete.
 
 ## Test Rules
+- Test in `MainPrototype` unless the task explicitly names another scene.
 - For Unity Console tests, turn off Collapse before testing.
 - Clear the Console before pressing Play.
 - If Collapse is enabled, repeated logs may be grouped instead of appearing in time order.
 - After feature testing, confirm there are no red Console errors.
-- Test in `MainPrototype` unless the task explicitly names another scene.
+- Confirm there are no new yellow Console warnings.
+- When testing combat loop changes, confirm Stage fail fallback, Stage scaling, HP bars, Damage Popup, and Stage / Gold UI are not broken.
+- When testing Equipment MVP, confirm:
+  - Gold is spent.
+  - A/B MagicBook count increases.
+  - Equipped MagicBook changes Hero attack output.
+  - Blocked Stage can become easier after equipment growth.
 
 ## Git Workflow Rules
 - Do not work directly on `main`.
@@ -310,17 +529,20 @@ Use this folder structure under `Assets/AnimaSpire` when possible:
 - Localization
 
 ## Next Development Priority
-After `PROJECT_RULES.md` v0.3, Header Stage / Gold UI is complete.
+After `PROJECT_RULES.md` v0.4, the next feature candidates are:
 
-Next feature candidate:
-
-- Hero HP UI display
+- Battle / Equipment tab basic switching
+- MagicBook summon and equip MVP
 
 Then:
 
-- Enemy HP bar above Enemy
-- Damage popup UI
-- Hero defeat and stage fallback
-- Upgrade Attack button
+- MagicBook owned count display
+- MagicBook equip and Hero stat reflection
+- Equipment collection structure
+- Equipment synthesis later
+- Equipment slot upgrade later
+- Equipment options later
+- Save system later
 
-Do not implement equipment, spirit stones, save, ads, in-app purchases, PVP, or guilds yet.
+Do not implement direct Gold-to-Hero-attack Upgrade Attack button as the next priority.
+Do not implement equipment synthesis, disassembly, slot upgrade, random options, save/load, offline rewards, ads, in-app purchases, PVP, guild, clan, co-op, networking, or full 8 equipment type UI in the first equipment MVP.
