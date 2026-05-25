@@ -7,9 +7,11 @@ public class EquipmentManager : MonoBehaviour
     [SerializeField] private GameManager gameManager;
 
     private readonly EquipmentCollectionState collectionState = new EquipmentCollectionState();
+    private readonly EquipmentLoadoutState loadoutState = new EquipmentLoadoutState();
 
     public int MagicBookCost => MagicBookSummonCost;
     public EquipmentCollectionState CollectionState => collectionState;
+    public EquipmentLoadoutState LoadoutState => loadoutState;
 
     private void Awake()
     {
@@ -58,5 +60,42 @@ public class EquipmentManager : MonoBehaviour
     public bool HasOwned(EquipmentId id, EquipmentTier tier)
     {
         return collectionState.HasOwned(id, tier);
+    }
+
+    public bool TryEquipMagicBook(EquipmentId id, out string message)
+    {
+        EquipmentTier tier = EquipmentTier.T0;
+
+        if (id != EquipmentId.AMagicBook && id != EquipmentId.BMagicBook)
+        {
+            message = "Only MagicBook equipment can be equipped now.";
+            return false;
+        }
+
+        if (!EquipmentCatalog.TryGetDefinition(id, tier, out EquipmentDefinition definition))
+        {
+            message = "MagicBook data is missing.";
+            return false;
+        }
+
+        if (!collectionState.HasOwned(id, tier))
+        {
+            message = $"You do not own {definition.displayName} {tier}.";
+            return false;
+        }
+
+        loadoutState.EquipMagicBook(new EquipmentStackKey(id, tier));
+        message = $"Equipped {definition.displayName} {tier}.";
+        return true;
+    }
+
+    public bool HasEquippedMagicBook()
+    {
+        return loadoutState.HasEquippedMagicBook();
+    }
+
+    public bool TryGetEquippedMagicBook(out EquipmentStackKey key)
+    {
+        return loadoutState.TryGetEquippedMagicBook(out key);
     }
 }
