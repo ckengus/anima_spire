@@ -13,7 +13,7 @@ public class CombatManager : MonoBehaviour
     private float heroAttackTimer;
     private float spiritAttackTimer;
     private float enemyAttackTimer;
-    private bool isResolvingEnemyDefeat;
+    private bool isResolvingCombat;
 
     private void Start()
     {
@@ -38,14 +38,20 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        if (isResolvingEnemyDefeat || !hero.IsAlive || !enemy.IsAlive)
+        if (isResolvingCombat)
         {
-            if (!isResolvingEnemyDefeat && !enemy.IsAlive)
-            {
-                isResolvingEnemyDefeat = true;
-                StartCoroutine(RewardGoldAndResetCombat());
-            }
+            return;
+        }
 
+        if (!enemy.IsAlive)
+        {
+            StartCoroutine(RewardGoldAndResetCombat());
+            return;
+        }
+
+        if (!hero.IsAlive)
+        {
+            StartCoroutine(RetreatStageAndResetCombat());
             return;
         }
 
@@ -78,7 +84,7 @@ public class CombatManager : MonoBehaviour
 
     private IEnumerator RewardGoldAndResetCombat()
     {
-        isResolvingEnemyDefeat = true;
+        isResolvingCombat = true;
         gameManager.AddGold(enemy.goldReward);
         stageManager?.AdvanceStage();
 
@@ -87,7 +93,27 @@ public class CombatManager : MonoBehaviour
         hero.ResetHp();
         ApplyCurrentStageEnemyStats();
         ResetAttackTimers();
-        isResolvingEnemyDefeat = false;
+        isResolvingCombat = false;
+    }
+
+    private IEnumerator RetreatStageAndResetCombat()
+    {
+        isResolvingCombat = true;
+
+        string failedStageLabel = stageManager != null ? stageManager.GetCurrentStageLabel() : "Unknown";
+        Debug.Log($"Stage failed: {failedStageLabel}");
+
+        stageManager?.RetreatStageOnFailure();
+
+        string retreatStageLabel = stageManager != null ? stageManager.GetCurrentStageLabel() : "Unknown";
+        Debug.Log($"Retreat to Stage: {retreatStageLabel}");
+
+        yield return new WaitForSeconds(1f);
+
+        hero.ResetHp();
+        ApplyCurrentStageEnemyStats();
+        ResetAttackTimers();
+        isResolvingCombat = false;
     }
 
     private void ApplyCurrentStageEnemyStats()

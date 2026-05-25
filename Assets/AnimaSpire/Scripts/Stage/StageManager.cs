@@ -47,4 +47,14 @@ public class StageManager : MonoBehaviour
 
         Debug.Log($"Stage: {GetCurrentStageLogLabel()}");
     }
+
+    public void RetreatStageOnFailure()
+    {
+        if (currentStage > 1)
+        {
+            currentStage--;
+        }
+
+        Debug.Log($"Stage: {GetCurrentStageLogLabel()}");
+    }
 }
