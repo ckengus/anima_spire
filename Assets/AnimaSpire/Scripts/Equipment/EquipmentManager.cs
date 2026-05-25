@@ -10,11 +10,14 @@ public class EquipmentManager : MonoBehaviour
     private readonly EquipmentLoadoutState loadoutState = new EquipmentLoadoutState();
 
     public int MagicBookCost => MagicBookSummonCost;
+    public static EquipmentManager Instance { get; private set; }
     public EquipmentCollectionState CollectionState => collectionState;
     public EquipmentLoadoutState LoadoutState => loadoutState;
 
     private void Awake()
     {
+        Instance = this;
+
         if (gameManager == null)
         {
             gameManager = FindAnyObjectByType<GameManager>();
@@ -97,5 +100,20 @@ public class EquipmentManager : MonoBehaviour
     public bool TryGetEquippedMagicBook(out EquipmentStackKey key)
     {
         return loadoutState.TryGetEquippedMagicBook(out key);
+    }
+
+    public int GetEquippedMagicBookBonusAttackPower()
+    {
+        if (!loadoutState.TryGetEquippedMagicBook(out EquipmentStackKey key))
+        {
+            return 0;
+        }
+
+        if (!EquipmentCatalog.TryGetDefinition(key.id, key.tier, out EquipmentDefinition definition))
+        {
+            return 0;
+        }
+
+        return definition.bonusAttackPower;
     }
 }

@@ -301,7 +301,7 @@ public class EquipmentPanelController : MonoBehaviour
         EquipmentStackKey value = key.Value;
         if (EquipmentCatalog.TryGetDefinition(value.id, value.tier, out EquipmentDefinition definition))
         {
-            currentMagicBookText.text = $"Current MagicBook: {definition.displayName} {value.tier}";
+            currentMagicBookText.text = $"Current MagicBook: {definition.displayName} {value.tier} (+{definition.bonusAttackPower} ATK)";
             return;
         }
 

@@ -47,7 +47,18 @@ public class HeroUnit : MonoBehaviour
             return;
         }
 
-        target.TakeDamage(magicAttack);
-        Debug.Log($"Hero dealt {magicAttack} damage. Enemy HP: {target.currentHp}/{target.maxHp}");
+        float finalDamage = magicAttack + GetEquipmentBonusAttackPower();
+        target.TakeDamage(finalDamage);
+        Debug.Log($"Hero dealt {finalDamage} damage. Enemy HP: {target.currentHp}/{target.maxHp}");
+    }
+
+    private int GetEquipmentBonusAttackPower()
+    {
+        if (EquipmentManager.Instance == null)
+        {
+            return 0;
+        }
+
+        return EquipmentManager.Instance.GetEquippedMagicBookBonusAttackPower();
     }
 }
