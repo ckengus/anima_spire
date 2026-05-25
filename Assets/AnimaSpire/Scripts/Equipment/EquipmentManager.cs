@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -14,6 +15,9 @@ public class EquipmentManager : MonoBehaviour
     public static EquipmentManager Instance { get; private set; }
     public EquipmentCollectionState CollectionState => collectionState;
     public EquipmentLoadoutState LoadoutState => loadoutState;
+
+    public event Action<EquipmentId, EquipmentTier> OnMagicBookSummoned;
+    public event Action<EquipmentStackKey?> OnEquippedMagicBookChangedByGameplay;
 
     public static EquipmentManager EnsureInstance()
     {
@@ -59,7 +63,7 @@ public class EquipmentManager : MonoBehaviour
             return false;
         }
 
-        EquipmentId summonedId = Random.value < 0.5f ? EquipmentId.AMagicBook : EquipmentId.BMagicBook;
+        EquipmentId summonedId = UnityEngine.Random.value < 0.5f ? EquipmentId.AMagicBook : EquipmentId.BMagicBook;
         EquipmentTier tier = EquipmentTier.T0;
 
         if (!EquipmentCatalog.TryGetDefinition(summonedId, tier, out summonedDefinition))
@@ -76,6 +80,7 @@ public class EquipmentManager : MonoBehaviour
         }
 
         collectionState.AddOwnedCount(summonedId, tier, 1);
+        OnMagicBookSummoned?.Invoke(summonedId, tier);
         message = $"Summoned {summonedDefinition.displayName} {tier}";
         return true;
     }
@@ -112,7 +117,14 @@ public class EquipmentManager : MonoBehaviour
             return false;
         }
 
-        loadoutState.EquipMagicBook(new EquipmentStackKey(id, tier));
+        EquipmentStackKey nextKey = new EquipmentStackKey(id, tier);
+        bool changed = !loadoutState.TryGetEquippedMagicBook(out EquipmentStackKey currentKey) || currentKey != nextKey;
+        loadoutState.EquipMagicBook(nextKey);
+        if (changed)
+        {
+            OnEquippedMagicBookChangedByGameplay?.Invoke(nextKey);
+        }
+
         message = $"Equipped {definition.displayName} {tier}.";
         return true;
     }
@@ -142,6 +154,11 @@ public class EquipmentManager : MonoBehaviour
         }
 
         loadoutState.SetEquippedMagicBookForLoad(key);
+    }
+
+    public List<KeyValuePair<EquipmentStackKey, int>> GetOwnedStacksSnapshot()
+    {
+        return collectionState.GetOwnedStacksSnapshot();
     }
 
     public int GetEquippedMagicBookBonusAttackPower()

@@ -1199,6 +1199,8 @@ MonoBehaviour:
   stageManager: {fileID: 100000012}
   equipmentManager: {fileID: 0}
   combatManager: {fileID: 100000022}
+  saveIntervalSeconds: 60
+  importantSaveDelaySeconds: 2
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0

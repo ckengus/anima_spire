@@ -33,7 +33,6 @@ public sealed class EquipmentCollectionState
 
         if (stacks == null)
         {
-            NotifyKnownMagicBookCounts();
             return;
         }
 
@@ -46,8 +45,6 @@ public sealed class EquipmentCollectionState
 
             ownedCounts[stack.Key] = stack.Value;
         }
-
-        NotifyKnownMagicBookCounts();
     }
 
     public bool HasOwned(EquipmentId id, EquipmentTier tier)
@@ -55,9 +52,8 @@ public sealed class EquipmentCollectionState
         return GetOwnedCount(id, tier) >= 1;
     }
 
-    private void NotifyKnownMagicBookCounts()
+    public List<KeyValuePair<EquipmentStackKey, int>> GetOwnedStacksSnapshot()
     {
-        OnCountChanged?.Invoke(EquipmentId.AMagicBook, EquipmentTier.T0, GetOwnedCount(EquipmentId.AMagicBook, EquipmentTier.T0));
-        OnCountChanged?.Invoke(EquipmentId.BMagicBook, EquipmentTier.T0, GetOwnedCount(EquipmentId.BMagicBook, EquipmentTier.T0));
+        return new List<KeyValuePair<EquipmentStackKey, int>>(ownedCounts);
     }
 }

@@ -13,6 +13,7 @@ public sealed class GameBootstrapper : MonoBehaviour
     {
         EnsureRuntimeManagers();
         progressSaveManager.LoadAndApplyData();
+        progressSaveManager.BindRuntimeEvents();
     }
 
     private void EnsureRuntimeManagers()

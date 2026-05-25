@@ -11,22 +11,83 @@ public sealed class ProgressSaveManager : MonoBehaviour
     [SerializeField] private StageManager stageManager;
     [SerializeField] private EquipmentManager equipmentManager;
     [SerializeField] private CombatManager combatManager;
+    [SerializeField] private float saveIntervalSeconds = 60f;
+    [SerializeField] private float importantSaveDelaySeconds = 2f;
 
-    private readonly LocalProgressSaveRepository repository = new LocalProgressSaveRepository();
+    private readonly LocalProgressSaveRepository localRepository = new LocalProgressSaveRepository();
 
-    public string SaveFilePath => repository.SaveFilePath;
+    private bool isDirty;
+    private bool runtimeEventsBound;
+    private bool saveSoonScheduled;
+    private bool isSaving;
+    private float nextSaveSoonTime;
+    private float nextPeriodicSaveTime;
+
+    public string SaveFilePath => localRepository.SaveFilePath;
+    private IProgressSaveRepository Repository => localRepository;
+
+    private void Awake()
+    {
+        nextPeriodicSaveTime = Time.unscaledTime + Mathf.Max(saveIntervalSeconds, 1f);
+    }
+
+    private void Update()
+    {
+        float now = Time.unscaledTime;
+        bool savedThisFrame = false;
+
+        if (saveSoonScheduled && now >= nextSaveSoonTime)
+        {
+            saveSoonScheduled = false;
+            SaveIfDirty();
+            savedThisFrame = true;
+        }
+
+        if (now >= nextPeriodicSaveTime)
+        {
+            nextPeriodicSaveTime = now + Mathf.Max(saveIntervalSeconds, 1f);
+
+            if (!savedThisFrame)
+            {
+                SaveIfDirty();
+            }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        UnbindRuntimeEvents();
+    }
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (!pauseStatus)
+        {
+            return;
+        }
+
+        if (isDirty || saveSoonScheduled)
+        {
+            SaveNow();
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        SaveIfDirty();
+    }
 
     public bool LoadAndApplyData()
     {
         EnsureReferences();
 
-        if (!repository.HasSave())
+        if (!Repository.HasSave())
         {
-            Debug.Log($"No progress save file found. Starting with default runtime state. Path: {repository.SaveFilePath}");
+            Debug.Log($"No progress save file found. Starting with default runtime state. Path: {localRepository.SaveFilePath}");
             return false;
         }
 
-        if (!repository.TryLoad(out PlayerProgressData data))
+        if (!Repository.TryLoad(out PlayerProgressData data))
         {
             Debug.LogWarning("Progress save load failed. Starting with default runtime state.");
             return false;
@@ -52,7 +113,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
         ChallengeStage challengeStage = CalculateChallengeStageFromLastCleared(data.lastClearedArea, data.lastClearedStage);
 
         gameManager?.SetGoldForLoad(data.gold);
-        stageManager?.SetStageForLoad(challengeStage.area, challengeStage.stage);
+        stageManager?.SetProgressForLoad(challengeStage.area, challengeStage.stage, data.lastClearedArea, data.lastClearedStage);
 
         List<KeyValuePair<EquipmentStackKey, int>> ownedStacks = BuildOwnedStacksForLoad(data.ownedEquipment);
         equipmentManager?.ReplaceOwnedStacksForLoad(ownedStacks);
@@ -62,6 +123,183 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
         Debug.Log($"Progress loaded. lastCleared={Mathf.Max(data.lastClearedArea, 1)}-{Mathf.Clamp(data.lastClearedStage, 0, 10)}, challenge={challengeStage.area}-{challengeStage.stage}, gold={Mathf.Max(data.gold, 0)}");
         return true;
+    }
+
+    public void BindRuntimeEvents()
+    {
+        EnsureReferences();
+
+        if (runtimeEventsBound)
+        {
+            return;
+        }
+
+        if (gameManager != null)
+        {
+            gameManager.OnGoldChanged += HandleGoldChanged;
+        }
+
+        if (stageManager != null)
+        {
+            stageManager.OnLastClearedStageChanged += HandleLastClearedStageChanged;
+        }
+
+        if (equipmentManager != null)
+        {
+            equipmentManager.OnMagicBookSummoned += HandleMagicBookSummoned;
+            equipmentManager.OnEquippedMagicBookChangedByGameplay += HandleEquippedMagicBookChangedByGameplay;
+        }
+
+        runtimeEventsBound = true;
+    }
+
+    public void UnbindRuntimeEvents()
+    {
+        if (!runtimeEventsBound)
+        {
+            return;
+        }
+
+        if (gameManager != null)
+        {
+            gameManager.OnGoldChanged -= HandleGoldChanged;
+        }
+
+        if (stageManager != null)
+        {
+            stageManager.OnLastClearedStageChanged -= HandleLastClearedStageChanged;
+        }
+
+        if (equipmentManager != null)
+        {
+            equipmentManager.OnMagicBookSummoned -= HandleMagicBookSummoned;
+            equipmentManager.OnEquippedMagicBookChangedByGameplay -= HandleEquippedMagicBookChangedByGameplay;
+        }
+
+        runtimeEventsBound = false;
+    }
+
+    public void MarkDirty()
+    {
+        isDirty = true;
+    }
+
+    public void ScheduleSaveSoon()
+    {
+        MarkDirty();
+
+        if (saveSoonScheduled)
+        {
+            return;
+        }
+
+        saveSoonScheduled = true;
+        nextSaveSoonTime = Time.unscaledTime + Mathf.Max(importantSaveDelaySeconds, 0f);
+    }
+
+    public bool SaveIfDirty()
+    {
+        if (!isDirty)
+        {
+            return false;
+        }
+
+        return SaveNow();
+    }
+
+    public bool SaveNow()
+    {
+        if (isSaving)
+        {
+            return false;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            PlayerProgressData snapshot = BuildSnapshotData();
+            bool succeeded = Repository.TrySave(snapshot);
+
+            if (succeeded)
+            {
+                isDirty = false;
+                saveSoonScheduled = false;
+                Debug.Log($"Progress saved. Path: {localRepository.SaveFilePath}");
+                return true;
+            }
+
+            isDirty = true;
+            Debug.LogWarning("Progress save failed. Dirty state remains active.");
+            return false;
+        }
+        catch (Exception exception)
+        {
+            isDirty = true;
+            Debug.LogWarning($"Progress save failed: {exception.Message}");
+            return false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private PlayerProgressData BuildSnapshotData()
+    {
+        EnsureReferences();
+
+        PlayerProgressData data = PlayerProgressData.CreateDefault();
+        data.dataVersion = SupportedDataVersion;
+        data.gold = gameManager != null ? gameManager.GetGold() : 0;
+
+        if (stageManager != null)
+        {
+            data.lastClearedArea = stageManager.LastClearedArea;
+            data.lastClearedStage = stageManager.LastClearedStage;
+        }
+
+        if (equipmentManager != null)
+        {
+            List<KeyValuePair<EquipmentStackKey, int>> stacks = equipmentManager.GetOwnedStacksSnapshot();
+            for (int i = 0; i < stacks.Count; i++)
+            {
+                KeyValuePair<EquipmentStackKey, int> stack = stacks[i];
+                if (stack.Value <= 0)
+                {
+                    continue;
+                }
+
+                data.ownedEquipment.Add(new EquipmentSaveData(stack.Key.id.ToString(), stack.Key.tier.ToString(), stack.Value));
+            }
+
+            if (equipmentManager.TryGetEquippedMagicBook(out EquipmentStackKey equippedKey))
+            {
+                data.equippedMagicBookKey = $"{equippedKey.id}:{equippedKey.tier}";
+            }
+        }
+
+        return data;
+    }
+
+    private void HandleGoldChanged(int currentGold)
+    {
+        MarkDirty();
+    }
+
+    private void HandleLastClearedStageChanged(int area, int stage)
+    {
+        MarkDirty();
+    }
+
+    private void HandleMagicBookSummoned(EquipmentId id, EquipmentTier tier)
+    {
+        ScheduleSaveSoon();
+    }
+
+    private void HandleEquippedMagicBookChangedByGameplay(EquipmentStackKey? key)
+    {
+        MarkDirty();
     }
 
     private List<KeyValuePair<EquipmentStackKey, int>> BuildOwnedStacksForLoad(List<EquipmentSaveData> savedEquipment)
