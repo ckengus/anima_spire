@@ -9,11 +9,13 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private GameObject infoPanel;
     [SerializeField] private GameObject bottomMenuPanel;
     [SerializeField] private GameObject equipmentPanel;
+    [SerializeField] private EquipmentManager equipmentManager;
 
     private void Awake()
     {
         EnsureReferences();
         EnsureEventSystem();
+        EnsureEquipmentManager();
         EnsureBottomMenuButtons();
         EnsureEquipmentPanel();
         ShowBattle();
@@ -142,7 +144,7 @@ public class MainTabController : MonoBehaviour
         }
 
         equipmentPanel.transform.SetAsLastSibling();
-        EnsureEquipmentText();
+        EnsureEquipmentPanelController();
     }
 
     private GameObject CreateEquipmentPanel()
@@ -163,33 +165,31 @@ public class MainTabController : MonoBehaviour
         return panelObject;
     }
 
-    private void EnsureEquipmentText()
+    private void EnsureEquipmentManager()
     {
-        Transform existing = equipmentPanel.transform.Find("EquipmentPlaceholderText");
-        Text text;
-
-        if (existing != null && existing.TryGetComponent(out text))
+        if (equipmentManager != null)
         {
-            text.text = "Equipment Panel\nMagicBook MVP will be implemented later.";
             return;
         }
 
-        GameObject textObject = new GameObject("EquipmentPlaceholderText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        textObject.transform.SetParent(equipmentPanel.transform, false);
+        equipmentManager = FindAnyObjectByType<EquipmentManager>();
+        if (equipmentManager != null)
+        {
+            return;
+        }
 
-        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
-        rectTransform.anchorMin = Vector2.zero;
-        rectTransform.anchorMax = Vector2.one;
-        rectTransform.anchoredPosition = Vector2.zero;
-        rectTransform.sizeDelta = new Vector2(-96f, -96f);
+        GameObject managerObject = new GameObject("EquipmentManager", typeof(EquipmentManager));
+        equipmentManager = managerObject.GetComponent<EquipmentManager>();
+    }
 
-        text = textObject.GetComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = 42;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.color = Color.white;
-        text.raycastTarget = false;
-        text.text = "Equipment Panel\nMagicBook MVP will be implemented later.";
+    private void EnsureEquipmentPanelController()
+    {
+        if (!equipmentPanel.TryGetComponent(out EquipmentPanelController controller))
+        {
+            controller = equipmentPanel.AddComponent<EquipmentPanelController>();
+        }
+
+        controller.Initialize(equipmentManager);
     }
 
     private void SetActiveIfPresent(GameObject target, bool isActive)

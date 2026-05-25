@@ -14,4 +14,21 @@ public class GameManager : MonoBehaviour
         gold += amount;
         Debug.Log($"Gold: {gold}");
     }
+
+    public bool TrySpendGold(int amount)
+    {
+        if (amount <= 0)
+        {
+            return false;
+        }
+
+        if (gold < amount)
+        {
+            return false;
+        }
+
+        gold -= amount;
+        Debug.Log($"Gold: {gold}");
+        return true;
+    }
 }
