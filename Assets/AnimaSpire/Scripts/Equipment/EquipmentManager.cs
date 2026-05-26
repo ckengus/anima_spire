@@ -92,7 +92,8 @@ public class EquipmentManager : MonoBehaviour
 
     public int GetWeaponSlotUpgradeCost(int currentLevel)
     {
-        return WeaponSlotUpgradeCost;
+        int safeLevel = Mathf.Max(0, currentLevel);
+        return WeaponSlotUpgradeCost * (safeLevel + 1);
     }
 
     public int GetWeaponSlotAttackBonus(int slotLevel)

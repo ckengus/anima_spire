@@ -18,7 +18,7 @@ public static class EquipmentCatalog
             EquipmentTier.T0,
             "B MagicBook",
             "Basic MagicBook B for MVP testing.",
-            1,
+            3,
             2)
     };
 

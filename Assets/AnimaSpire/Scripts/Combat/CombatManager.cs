@@ -77,7 +77,7 @@ public class CombatManager : MonoBehaviour
     private IEnumerator RewardGoldAndResetCombat()
     {
         isResolvingCombat = true;
-        gameManager.AddGold(enemy.goldReward);
+        gameManager.AddGold(CalculateCurrentStageGoldReward());
         stageManager?.AdvanceStage();
 
         yield return new WaitForSeconds(1f);
@@ -165,6 +165,19 @@ public class CombatManager : MonoBehaviour
             stageManager.CurrentStage,
             stageManager.MaxStagePerArea);
         enemy.ApplyStats(enemyStats.MaxHp, enemyStats.AttackPower);
+    }
+
+    private int CalculateCurrentStageGoldReward()
+    {
+        if (stageManager == null || stageDifficultyCalculator == null)
+        {
+            return enemy != null ? Mathf.Max(enemy.goldReward, 10) : 10;
+        }
+
+        return stageDifficultyCalculator.CalculateGoldReward(
+            stageManager.CurrentArea,
+            stageManager.CurrentStage,
+            stageManager.MaxStagePerArea);
     }
 
     private void ResetAttackTimers()
