@@ -8,6 +8,7 @@ public sealed class PlayerProgressData
     public int lastClearedArea;
     public int lastClearedStage;
     public int gold;
+    public int weaponSlotLevel;
     public List<EquipmentSaveData> ownedEquipment;
     public string equippedMagicBookKey;
 
@@ -19,6 +20,7 @@ public sealed class PlayerProgressData
             lastClearedArea = 1,
             lastClearedStage = 0,
             gold = 0,
+            weaponSlotLevel = 0,
             ownedEquipment = new List<EquipmentSaveData>(),
             equippedMagicBookKey = string.Empty
         };

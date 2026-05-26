@@ -135,6 +135,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
         List<KeyValuePair<EquipmentStackKey, int>> ownedStacks = BuildOwnedStacksForLoad(data.ownedEquipment);
         equipmentManager?.ReplaceOwnedStacksForLoad(ownedStacks);
         equipmentManager?.SetEquippedMagicBookForLoad(ParseEquippedMagicBookForLoad(data.equippedMagicBookKey));
+        equipmentManager?.SetWeaponSlotLevelForLoad(data.weaponSlotLevel);
 
         combatManager?.RestartCombatForLoadedProgress();
 
@@ -165,6 +166,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
         {
             equipmentManager.OnMagicBookSummoned += HandleMagicBookSummoned;
             equipmentManager.OnEquippedMagicBookChangedByGameplay += HandleEquippedMagicBookChangedByGameplay;
+            equipmentManager.OnWeaponSlotUpgraded += HandleWeaponSlotUpgraded;
         }
 
         runtimeEventsBound = true;
@@ -191,6 +193,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
         {
             equipmentManager.OnMagicBookSummoned -= HandleMagicBookSummoned;
             equipmentManager.OnEquippedMagicBookChangedByGameplay -= HandleEquippedMagicBookChangedByGameplay;
+            equipmentManager.OnWeaponSlotUpgraded -= HandleWeaponSlotUpgraded;
         }
 
         runtimeEventsBound = false;
@@ -331,6 +334,8 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
         if (equipmentManager != null)
         {
+            data.weaponSlotLevel = equipmentManager.WeaponSlotLevel;
+
             List<KeyValuePair<EquipmentStackKey, int>> stacks = equipmentManager.GetOwnedStacksSnapshot();
             for (int i = 0; i < stacks.Count; i++)
             {
@@ -370,6 +375,11 @@ public sealed class ProgressSaveManager : MonoBehaviour
     private void HandleEquippedMagicBookChangedByGameplay(EquipmentStackKey? key)
     {
         MarkDirty();
+    }
+
+    private void HandleWeaponSlotUpgraded(int slotLevel)
+    {
+        ScheduleSaveSoon();
     }
 
     private List<KeyValuePair<EquipmentStackKey, int>> BuildOwnedStacksForLoad(List<EquipmentSaveData> savedEquipment)

@@ -9,12 +9,16 @@ public class EquipmentPanelController : MonoBehaviour
     [SerializeField] private Text currentMagicBookText;
     [SerializeField] private Text lastResultText;
     [SerializeField] private Text costText;
+    [SerializeField] private Text weaponSlotLevelText;
+    [SerializeField] private Text weaponSlotUpgradeCostText;
     [SerializeField] private Button summonButton;
     [SerializeField] private Button equipAButton;
     [SerializeField] private Button equipBButton;
+    [SerializeField] private Button upgradeWeaponSlotButton;
 
     private bool isCollectionSubscribed;
     private bool isLoadoutSubscribed;
+    private bool isSlotSubscribed;
 
     private void Awake()
     {
@@ -61,6 +65,9 @@ public class EquipmentPanelController : MonoBehaviour
         aMagicBookCountText = EnsureText(contentRoot, "AMagicBookCountText", string.Empty, 34, TextAnchor.MiddleLeft, 64f);
         bMagicBookCountText = EnsureText(contentRoot, "BMagicBookCountText", string.Empty, 34, TextAnchor.MiddleLeft, 64f);
         currentMagicBookText = EnsureText(contentRoot, "CurrentMagicBookText", "MagicBook: None", 32, TextAnchor.MiddleCenter, 76f);
+        weaponSlotLevelText = EnsureText(contentRoot, "WeaponSlotLevelText", "Weapon Slot Lv. 0", 30, TextAnchor.MiddleCenter, 56f);
+        weaponSlotUpgradeCostText = EnsureText(contentRoot, "WeaponSlotUpgradeCostText", "Upgrade Cost: 10 Gold", 30, TextAnchor.MiddleCenter, 56f);
+        upgradeWeaponSlotButton = EnsureButton(contentRoot, "UpgradeWeaponSlotButton", "Upgrade Weapon Slot", OnUpgradeWeaponSlotButtonClicked, 88f);
         lastResultText = EnsureText(contentRoot, "LastSummonResultText", "Result: None", 30, TextAnchor.MiddleCenter, 76f);
 
         Transform equipButtonRow = EnsureHorizontalRow(contentRoot, "EquipButtonRow", 104f);
@@ -260,6 +267,12 @@ public class EquipmentPanelController : MonoBehaviour
             equipmentManager.LoadoutState.OnEquippedMagicBookChanged += OnEquippedMagicBookChanged;
             isLoadoutSubscribed = true;
         }
+
+        if (!isSlotSubscribed)
+        {
+            equipmentManager.OnWeaponSlotUpgraded += OnWeaponSlotUpgraded;
+            isSlotSubscribed = true;
+        }
     }
 
     private void Unsubscribe()
@@ -279,6 +292,12 @@ public class EquipmentPanelController : MonoBehaviour
         {
             equipmentManager.LoadoutState.OnEquippedMagicBookChanged -= OnEquippedMagicBookChanged;
             isLoadoutSubscribed = false;
+        }
+
+        if (isSlotSubscribed)
+        {
+            equipmentManager.OnWeaponSlotUpgraded -= OnWeaponSlotUpgraded;
+            isSlotSubscribed = false;
         }
     }
 
@@ -303,6 +322,20 @@ public class EquipmentPanelController : MonoBehaviour
     private void OnEquipBButtonClicked()
     {
         TryEquipMagicBook(EquipmentId.BMagicBook);
+    }
+
+    private void OnUpgradeWeaponSlotButtonClicked()
+    {
+        if (equipmentManager == null)
+        {
+            SetLastResult("Result: Equipment system is not ready.");
+            return;
+        }
+
+        equipmentManager.TryUpgradeWeaponSlot(out string message);
+        SetLastResult($"Result: {message}");
+        RefreshWeaponSlot();
+        RefreshCurrentMagicBook();
     }
 
     private void TryEquipMagicBook(EquipmentId id)
@@ -342,11 +375,18 @@ public class EquipmentPanelController : MonoBehaviour
         SetCurrentMagicBookText(key);
     }
 
+    private void OnWeaponSlotUpgraded(int slotLevel)
+    {
+        RefreshWeaponSlot();
+        RefreshCurrentMagicBook();
+    }
+
     private void RefreshAll()
     {
         RefreshCost();
         RefreshOwnedCounts();
         RefreshCurrentMagicBook();
+        RefreshWeaponSlot();
     }
 
     private void RefreshCost()
@@ -358,6 +398,22 @@ public class EquipmentPanelController : MonoBehaviour
 
         int cost = equipmentManager != null ? equipmentManager.MagicBookCost : 10;
         costText.text = $"Summon Cost: {cost} Gold";
+    }
+
+    private void RefreshWeaponSlot()
+    {
+        int slotLevel = equipmentManager != null ? equipmentManager.WeaponSlotLevel : 0;
+
+        if (weaponSlotLevelText != null)
+        {
+            weaponSlotLevelText.text = $"Weapon Slot Lv. {slotLevel}";
+        }
+
+        if (weaponSlotUpgradeCostText != null)
+        {
+            int cost = equipmentManager != null ? equipmentManager.GetWeaponSlotUpgradeCost(slotLevel) : 10;
+            weaponSlotUpgradeCostText.text = $"Upgrade Cost: {cost} Gold";
+        }
     }
 
     private void RefreshOwnedCounts()
@@ -405,7 +461,8 @@ public class EquipmentPanelController : MonoBehaviour
         EquipmentStackKey value = key.Value;
         if (EquipmentCatalog.TryGetDefinition(value.id, value.tier, out EquipmentDefinition definition))
         {
-            currentMagicBookText.text = $"MagicBook: {definition.displayName} {value.tier} (+{definition.bonusAttackPower} ATK)";
+            int totalBonus = equipmentManager != null ? equipmentManager.GetEquippedMagicBookBonusAttackPower() : definition.bonusAttackPower;
+            currentMagicBookText.text = $"MagicBook: {definition.displayName} {value.tier} (+{totalBonus} ATK)";
             return;
         }
 

@@ -5,19 +5,24 @@ using System.Collections.Generic;
 public class EquipmentManager : MonoBehaviour
 {
     private const int MagicBookSummonCost = 10;
+    private const int WeaponSlotUpgradeCost = 10;
+    private const int WeaponSlotAttackBonusPerLevel = 1;
 
     [SerializeField] private GameManager gameManager;
 
     private readonly EquipmentCollectionState collectionState = new EquipmentCollectionState();
     private readonly EquipmentLoadoutState loadoutState = new EquipmentLoadoutState();
+    private int weaponSlotLevel;
 
     public int MagicBookCost => MagicBookSummonCost;
+    public int WeaponSlotLevel => weaponSlotLevel;
     public static EquipmentManager Instance { get; private set; }
     public EquipmentCollectionState CollectionState => collectionState;
     public EquipmentLoadoutState LoadoutState => loadoutState;
 
     public event Action<EquipmentId, EquipmentTier> OnMagicBookSummoned;
     public event Action<EquipmentStackKey?> OnEquippedMagicBookChangedByGameplay;
+    public event Action<int> OnWeaponSlotUpgraded;
 
     public static EquipmentManager EnsureInstance()
     {
@@ -82,6 +87,37 @@ public class EquipmentManager : MonoBehaviour
         collectionState.AddOwnedCount(summonedId, tier, 1);
         OnMagicBookSummoned?.Invoke(summonedId, tier);
         message = $"Summoned {summonedDefinition.displayName} {tier}";
+        return true;
+    }
+
+    public int GetWeaponSlotUpgradeCost(int currentLevel)
+    {
+        return WeaponSlotUpgradeCost;
+    }
+
+    public int GetWeaponSlotAttackBonus(int slotLevel)
+    {
+        return Mathf.Max(0, slotLevel) * WeaponSlotAttackBonusPerLevel;
+    }
+
+    public bool TryUpgradeWeaponSlot(out string message)
+    {
+        if (gameManager == null)
+        {
+            message = "Equipment system is not ready.";
+            return false;
+        }
+
+        int cost = GetWeaponSlotUpgradeCost(weaponSlotLevel);
+        if (!gameManager.TrySpendGold(cost))
+        {
+            message = "Not enough Gold.";
+            return false;
+        }
+
+        weaponSlotLevel++;
+        OnWeaponSlotUpgraded?.Invoke(weaponSlotLevel);
+        message = "Slot upgraded.";
         return true;
     }
 
@@ -156,6 +192,11 @@ public class EquipmentManager : MonoBehaviour
         loadoutState.SetEquippedMagicBookForLoad(key);
     }
 
+    public void SetWeaponSlotLevelForLoad(int level)
+    {
+        weaponSlotLevel = Mathf.Max(level, 0);
+    }
+
     public List<KeyValuePair<EquipmentStackKey, int>> GetOwnedStacksSnapshot()
     {
         return collectionState.GetOwnedStacksSnapshot();
@@ -173,6 +214,6 @@ public class EquipmentManager : MonoBehaviour
             return 0;
         }
 
-        return definition.bonusAttackPower;
+        return definition.bonusAttackPower + GetWeaponSlotAttackBonus(weaponSlotLevel);
     }
 }
