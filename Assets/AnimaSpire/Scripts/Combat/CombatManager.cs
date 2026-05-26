@@ -13,6 +13,9 @@ public class CombatManager : MonoBehaviour
     [SerializeField] private Vector3 heroStartLocalPosition;
     [SerializeField] private Vector3 spiritStartLocalPosition;
     [SerializeField] private Vector3 enemyStartLocalPosition;
+    [Header("Enemy Runtime Movement")]
+    [SerializeField] private float enemyMoveSpeed = 0.75f;
+    [SerializeField] private float enemyStopDistance = 1.25f;
 
     private float heroAttackTimer;
     private float spiritAttackTimer;
@@ -51,6 +54,8 @@ public class CombatManager : MonoBehaviour
             StartCoroutine(RetreatStageAndResetCombat());
             return;
         }
+
+        UpdateEnemyMovement();
 
         heroAttackTimer += Time.deltaTime;
         spiritAttackTimer += Time.deltaTime;
@@ -190,6 +195,31 @@ public class CombatManager : MonoBehaviour
         }
 
         target.localPosition = startLocalPosition;
+    }
+
+    private void UpdateEnemyMovement()
+    {
+        if (hero == null || enemy == null || !hero.IsAlive || !enemy.IsAlive)
+        {
+            return;
+        }
+
+        Transform heroTransform = hero.transform;
+        Transform enemyTransform = enemy.transform;
+        Vector3 heroPosition = heroTransform.position;
+        Vector3 enemyPosition = enemyTransform.position;
+        float stopDistance = Mathf.Max(enemyStopDistance, 0f);
+        float currentDistance = Vector3.Distance(enemyPosition, heroPosition);
+
+        if (currentDistance <= stopDistance || Mathf.Approximately(currentDistance, 0f))
+        {
+            return;
+        }
+
+        Vector3 directionFromHeroToEnemy = (enemyPosition - heroPosition).normalized;
+        Vector3 stopPosition = heroPosition + directionFromHeroToEnemy * stopDistance;
+        float maxDistanceDelta = Mathf.Max(enemyMoveSpeed, 0f) * Time.deltaTime;
+        enemyTransform.position = Vector3.MoveTowards(enemyPosition, stopPosition, maxDistanceDelta);
     }
 
     private int CalculateCurrentStageGoldReward()
