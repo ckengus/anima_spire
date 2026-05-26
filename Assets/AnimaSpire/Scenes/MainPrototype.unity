@@ -284,6 +284,8 @@ MonoBehaviour:
   enemyStartLocalPosition: {x: 1.5, y: 0.8, z: 0}
   enemyMoveSpeed: 0.75
   enemyStopDistance: 1.25
+  heroAttackRange: 3
+  enemyAttackRange: 1.5
 --- !u!1 &100000030
 GameObject:
   m_ObjectHideFlags: 0

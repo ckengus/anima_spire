@@ -16,18 +16,28 @@ public class CombatManager : MonoBehaviour
     [Header("Enemy Runtime Movement")]
     [SerializeField] private float enemyMoveSpeed = 0.75f;
     [SerializeField] private float enemyStopDistance = 1.25f;
+    [Header("Attack Ranges")]
+    [SerializeField] private float heroAttackRange = 3.0f;
+    [SerializeField] private float enemyAttackRange = 1.5f;
 
     private float heroAttackTimer;
     private float spiritAttackTimer;
     private float enemyAttackTimer;
     private bool isResolvingCombat;
 
+    private void OnValidate()
+    {
+        ValidateAttackRangeSettings();
+    }
+
     private void Start()
     {
         EnsureReferences();
+        ValidateAttackRangeSettings();
 
         ResetRuntimePositionsForCombat();
         ApplyCurrentStageEnemyStats();
+        ResetAttackTimers();
         Debug.Log("CombatManager initialized.");
     }
 
@@ -55,15 +65,19 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        UpdateEnemyMovement();
+        bool enemyMovedThisFrame = UpdateEnemyMovement();
 
         heroAttackTimer += Time.deltaTime;
         spiritAttackTimer += Time.deltaTime;
+        enemyAttackTimer += Time.deltaTime;
 
         if (heroAttackTimer >= hero.castInterval)
         {
-            heroAttackTimer = 0f;
-            hero.DealDamage(enemy);
+            if (IsWithinRange(hero.transform, enemy.transform, heroAttackRange))
+            {
+                heroAttackTimer = 0f;
+                hero.DealDamage(enemy);
+            }
         }
 
         if (spiritAttackTimer >= spirit.castInterval)
@@ -72,11 +86,9 @@ public class CombatManager : MonoBehaviour
             spirit.DealDamage(enemy);
         }
 
-        if (enemy.IsAlive && hero.IsAlive)
+        if (enemy.IsAlive && hero.IsAlive && enemyAttackTimer >= enemy.attackInterval)
         {
-            enemyAttackTimer += Time.deltaTime;
-
-            if (enemyAttackTimer >= enemy.attackInterval)
+            if (!enemyMovedThisFrame && IsWithinRange(enemy.transform, hero.transform, enemyAttackRange))
             {
                 enemyAttackTimer = 0f;
                 enemy.DealDamage(hero);
@@ -130,6 +142,14 @@ public class CombatManager : MonoBehaviour
         ApplyCurrentStageEnemyStats();
         ResetAttackTimers();
         Debug.Log("Combat restarted for loaded progress.");
+    }
+
+    private void ValidateAttackRangeSettings()
+    {
+        if (enemyAttackRange < enemyStopDistance)
+        {
+            Debug.LogWarning("enemyAttackRange is smaller than enemyStopDistance. Enemy may move inside the visual stop distance before attacking.");
+        }
     }
 
     private void EnsureReferences()
@@ -197,29 +217,48 @@ public class CombatManager : MonoBehaviour
         target.localPosition = startLocalPosition;
     }
 
-    private void UpdateEnemyMovement()
+    private bool UpdateEnemyMovement()
     {
         if (hero == null || enemy == null || !hero.IsAlive || !enemy.IsAlive)
         {
-            return;
+            return false;
         }
 
         Transform heroTransform = hero.transform;
         Transform enemyTransform = enemy.transform;
         Vector3 heroPosition = heroTransform.position;
         Vector3 enemyPosition = enemyTransform.position;
-        float stopDistance = Mathf.Max(enemyStopDistance, 0f);
-        float currentDistance = Vector3.Distance(enemyPosition, heroPosition);
+        float stopDistance = Mathf.Max(enemyAttackRange, 0f);
 
-        if (currentDistance <= stopDistance || Mathf.Approximately(currentDistance, 0f))
+        if (IsWithinRange(enemyTransform, heroTransform, stopDistance))
         {
-            return;
+            return false;
         }
 
-        Vector3 directionFromHeroToEnemy = (enemyPosition - heroPosition).normalized;
+        Vector3 heroToEnemy = enemyPosition - heroPosition;
+        if (heroToEnemy.sqrMagnitude <= Mathf.Epsilon)
+        {
+            return false;
+        }
+
+        Vector3 directionFromHeroToEnemy = heroToEnemy.normalized;
         Vector3 stopPosition = heroPosition + directionFromHeroToEnemy * stopDistance;
         float maxDistanceDelta = Mathf.Max(enemyMoveSpeed, 0f) * Time.deltaTime;
-        enemyTransform.position = Vector3.MoveTowards(enemyPosition, stopPosition, maxDistanceDelta);
+        Vector3 nextPosition = Vector3.MoveTowards(enemyPosition, stopPosition, maxDistanceDelta);
+        enemyTransform.position = nextPosition;
+        return nextPosition != enemyPosition;
+    }
+
+    private static bool IsWithinRange(Transform attacker, Transform target, float range)
+    {
+        if (attacker == null || target == null)
+        {
+            return false;
+        }
+
+        float safeRange = Mathf.Max(range, 0f);
+        Vector3 distanceVector = target.position - attacker.position;
+        return distanceVector.sqrMagnitude <= safeRange * safeRange;
     }
 
     private int CalculateCurrentStageGoldReward()
@@ -237,8 +276,8 @@ public class CombatManager : MonoBehaviour
 
     private void ResetAttackTimers()
     {
-        heroAttackTimer = 0f;
-        spiritAttackTimer = 0f;
-        enemyAttackTimer = 0f;
+        heroAttackTimer = hero != null ? Mathf.Max(hero.castInterval, 0f) : 0f;
+        spiritAttackTimer = spirit != null ? Mathf.Max(spirit.castInterval, 0f) : 0f;
+        enemyAttackTimer = enemy != null ? Mathf.Max(enemy.attackInterval, 0f) : 0f;
     }
 }
