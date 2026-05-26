@@ -9,6 +9,10 @@ public class CombatManager : MonoBehaviour
     [SerializeField] private HeroUnit hero;
     [SerializeField] private SpiritUnit spirit;
     [SerializeField] private EnemyUnit enemy;
+    [Header("Runtime Start Positions")]
+    [SerializeField] private Vector3 heroStartLocalPosition;
+    [SerializeField] private Vector3 spiritStartLocalPosition;
+    [SerializeField] private Vector3 enemyStartLocalPosition;
 
     private float heroAttackTimer;
     private float spiritAttackTimer;
@@ -19,6 +23,7 @@ public class CombatManager : MonoBehaviour
     {
         EnsureReferences();
 
+        ResetRuntimePositionsForCombat();
         ApplyCurrentStageEnemyStats();
         Debug.Log("CombatManager initialized.");
     }
@@ -82,6 +87,7 @@ public class CombatManager : MonoBehaviour
 
         yield return new WaitForSeconds(1f);
 
+        ResetRuntimePositionsForCombat();
         hero.ResetHp();
         ApplyCurrentStageEnemyStats();
         ResetAttackTimers();
@@ -102,6 +108,7 @@ public class CombatManager : MonoBehaviour
 
         yield return new WaitForSeconds(1f);
 
+        ResetRuntimePositionsForCombat();
         hero.ResetHp();
         ApplyCurrentStageEnemyStats();
         ResetAttackTimers();
@@ -113,6 +120,7 @@ public class CombatManager : MonoBehaviour
         EnsureReferences();
         StopAllCoroutines();
         isResolvingCombat = false;
+        ResetRuntimePositionsForCombat();
         hero?.ResetHp();
         ApplyCurrentStageEnemyStats();
         ResetAttackTimers();
@@ -165,6 +173,23 @@ public class CombatManager : MonoBehaviour
             stageManager.CurrentStage,
             stageManager.MaxStagePerArea);
         enemy.ApplyStats(enemyStats.MaxHp, enemyStats.AttackPower);
+    }
+
+    private void ResetRuntimePositionsForCombat()
+    {
+        ResetRuntimeLocalPosition(hero != null ? hero.transform : null, heroStartLocalPosition);
+        ResetRuntimeLocalPosition(spirit != null ? spirit.transform : null, spiritStartLocalPosition);
+        ResetRuntimeLocalPosition(enemy != null ? enemy.transform : null, enemyStartLocalPosition);
+    }
+
+    private static void ResetRuntimeLocalPosition(Transform target, Vector3 startLocalPosition)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        target.localPosition = startLocalPosition;
     }
 
     private int CalculateCurrentStageGoldReward()
