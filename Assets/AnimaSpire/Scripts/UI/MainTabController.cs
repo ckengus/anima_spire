@@ -5,11 +5,13 @@ using UnityEngine.UI;
 
 public class MainTabController : MonoBehaviour
 {
+    [SerializeField] private GameObject headerPanel;
     [SerializeField] private GameObject combatPanel;
     [SerializeField] private GameObject infoPanel;
     [SerializeField] private GameObject bottomMenuPanel;
     [SerializeField] private GameObject equipmentPanel;
     [SerializeField] private EquipmentManager equipmentManager;
+    [SerializeField] private ProgressSaveManager progressSaveManager;
 
     private void Awake()
     {
@@ -17,6 +19,7 @@ public class MainTabController : MonoBehaviour
         EnsureEventSystem();
         EnsureEquipmentManager();
         EnsureBottomMenuButtons();
+        EnsureDebugResetButton();
         EnsureEquipmentPanel();
         ShowBattle();
     }
@@ -37,10 +40,16 @@ public class MainTabController : MonoBehaviour
 
     private void EnsureReferences()
     {
+        headerPanel = FindPanelIfMissing(headerPanel, "HeaderPanel");
         combatPanel = FindPanelIfMissing(combatPanel, "CombatPanel");
         infoPanel = FindPanelIfMissing(infoPanel, "InfoPanel");
         bottomMenuPanel = FindPanelIfMissing(bottomMenuPanel, "BottomMenuPanel");
         equipmentPanel = FindPanelIfMissing(equipmentPanel, "EquipmentPanel");
+
+        if (progressSaveManager == null)
+        {
+            progressSaveManager = FindAnyObjectByType<ProgressSaveManager>();
+        }
     }
 
     private GameObject FindPanelIfMissing(GameObject panel, string panelName)
@@ -63,6 +72,44 @@ public class MainTabController : MonoBehaviour
 
         EnsureButton("BattleButton", "Battle", new Vector2(0f, 0f), new Vector2(0.5f, 1f), ShowBattle);
         EnsureButton("EquipmentButton", "Equipment", new Vector2(0.5f, 0f), new Vector2(1f, 1f), ShowEquipment);
+    }
+
+    private void EnsureDebugResetButton()
+    {
+        if (headerPanel == null)
+        {
+            return;
+        }
+
+        const string objectName = "DebugResetProgressButton";
+        Transform existing = headerPanel.transform.Find(objectName);
+        GameObject buttonObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        buttonObject.transform.SetParent(headerPanel.transform, false);
+        buttonObject.transform.SetAsLastSibling();
+
+        RectTransform rectTransform = buttonObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.74f, 0.08f);
+        rectTransform.anchorMax = new Vector2(0.98f, 0.48f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = Vector2.zero;
+
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = new Color(0.36f, 0.12f, 0.12f, 0.92f);
+        image.raycastTarget = true;
+
+        Button button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = image;
+
+        Text text = EnsureDebugResetButtonText(buttonObject.transform);
+
+        if (!buttonObject.TryGetComponent(out DebugResetProgressButtonController controller))
+        {
+            controller = buttonObject.AddComponent<DebugResetProgressButtonController>();
+        }
+
+        controller.Initialize(button, text, progressSaveManager);
     }
 
     private void EnsureEventSystem()
@@ -132,6 +179,32 @@ public class MainTabController : MonoBehaviour
         text.color = Color.white;
         text.raycastTarget = false;
         text.text = label;
+
+        return text;
+    }
+
+    private Text EnsureDebugResetButtonText(Transform buttonTransform)
+    {
+        Transform existing = buttonTransform.Find("Text");
+        GameObject textObject = existing != null ? existing.gameObject : new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(buttonTransform, false);
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = Vector2.zero;
+
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 18;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 10;
+        text.resizeTextMaxSize = 18;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        text.text = "DEBUG RESET";
 
         return text;
     }

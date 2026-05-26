@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [DefaultExecutionOrder(-9000)]
 public sealed class ProgressSaveManager : MonoBehaviour
@@ -20,6 +21,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
     private bool runtimeEventsBound;
     private bool saveSoonScheduled;
     private bool isSaving;
+    private bool isResetting;
     private float nextSaveSoonTime;
     private float nextPeriodicSaveTime;
 
@@ -33,11 +35,21 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
     private void Update()
     {
+        if (isResetting)
+        {
+            return;
+        }
+
         float now = Time.unscaledTime;
         bool savedThisFrame = false;
 
         if (saveSoonScheduled && now >= nextSaveSoonTime)
         {
+            if (isResetting)
+            {
+                return;
+            }
+
             saveSoonScheduled = false;
             SaveIfDirty();
             savedThisFrame = true;
@@ -47,7 +59,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
         {
             nextPeriodicSaveTime = now + Mathf.Max(saveIntervalSeconds, 1f);
 
-            if (!savedThisFrame)
+            if (!savedThisFrame && !isResetting)
             {
                 SaveIfDirty();
             }
@@ -61,7 +73,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
     private void OnApplicationPause(bool pauseStatus)
     {
-        if (!pauseStatus)
+        if (!pauseStatus || isResetting)
         {
             return;
         }
@@ -74,6 +86,11 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
     private void OnApplicationQuit()
     {
+        if (isResetting)
+        {
+            return;
+        }
+
         SaveIfDirty();
     }
 
@@ -181,11 +198,21 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
     public void MarkDirty()
     {
+        if (isResetting)
+        {
+            return;
+        }
+
         isDirty = true;
     }
 
     public void ScheduleSaveSoon()
     {
+        if (isResetting)
+        {
+            return;
+        }
+
         MarkDirty();
 
         if (saveSoonScheduled)
@@ -199,6 +226,11 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
     public bool SaveIfDirty()
     {
+        if (isResetting)
+        {
+            return false;
+        }
+
         if (!isDirty)
         {
             return false;
@@ -209,6 +241,11 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
     public bool SaveNow()
     {
+        if (isResetting)
+        {
+            return false;
+        }
+
         if (isSaving)
         {
             return false;
@@ -242,6 +279,39 @@ public sealed class ProgressSaveManager : MonoBehaviour
         finally
         {
             isSaving = false;
+        }
+    }
+
+    public void ResetProgressForDebug()
+    {
+        isResetting = true;
+        isDirty = false;
+        saveSoonScheduled = false;
+
+        if (isSaving)
+        {
+            isResetting = false;
+            Debug.LogWarning("Debug reset progress was skipped because a progress save is already running.");
+            return;
+        }
+
+        try
+        {
+            if (!Repository.TryDelete())
+            {
+                isResetting = false;
+                Debug.LogWarning($"Debug reset progress failed. Scene reload skipped. Path: {localRepository.SaveFilePath}");
+                return;
+            }
+
+            Scene activeScene = SceneManager.GetActiveScene();
+            Debug.Log($"Debug reset progress completed. Reloading scene: {activeScene.name}");
+            SceneManager.LoadScene(activeScene.buildIndex);
+        }
+        catch (Exception exception)
+        {
+            isResetting = false;
+            Debug.LogWarning($"Debug reset progress failed: {exception.Message}");
         }
     }
 
