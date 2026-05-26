@@ -279,6 +279,9 @@ MonoBehaviour:
   hero: {fileID: 100000033}
   spirit: {fileID: 100000043}
   enemy: {fileID: 100000053}
+  heroStartLocalPosition: {x: -1.5, y: 0.8, z: 0}
+  spiritStartLocalPosition: {x: -2, y: 1.5, z: 0}
+  enemyStartLocalPosition: {x: 1.5, y: 0.8, z: 0}
 --- !u!1 &100000030
 GameObject:
   m_ObjectHideFlags: 0
