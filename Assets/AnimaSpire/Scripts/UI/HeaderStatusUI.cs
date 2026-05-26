@@ -20,8 +20,8 @@ public class HeaderStatusUI : MonoBehaviour
             stageManager = FindAnyObjectByType<StageManager>();
         }
 
-        stageText = EnsureText(stageText, "StageText", TextAnchor.MiddleLeft, new Vector2(0f, 0f), new Vector2(0.55f, 1f), new Vector2(32f, 0f));
-        goldText = EnsureText(goldText, "GoldText", TextAnchor.MiddleRight, new Vector2(0.55f, 0f), new Vector2(1f, 1f), new Vector2(-32f, 0f));
+        stageText = EnsureText(stageText, "StageText", TextAnchor.MiddleLeft, new Vector2(0.04f, 0f), new Vector2(0.52f, 1f));
+        goldText = EnsureText(goldText, "GoldText", TextAnchor.MiddleLeft, new Vector2(0.52f, 0f), new Vector2(0.98f, 1f));
         Refresh();
     }
 
@@ -43,16 +43,23 @@ public class HeaderStatusUI : MonoBehaviour
         }
     }
 
-    private Text EnsureText(Text text, string objectName, TextAnchor alignment, Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPosition)
+    private Text EnsureText(Text text, string objectName, TextAnchor alignment, Vector2 anchorMin, Vector2 anchorMax)
     {
         if (text != null)
         {
+            ApplyTextStyle(text, alignment);
             return text;
         }
 
         Transform existingText = transform.Find(objectName);
         if (existingText != null && existingText.TryGetComponent(out Text existing))
         {
+            RectTransform existingRect = existing.GetComponent<RectTransform>();
+            existingRect.anchorMin = anchorMin;
+            existingRect.anchorMax = anchorMax;
+            existingRect.anchoredPosition = Vector2.zero;
+            existingRect.sizeDelta = Vector2.zero;
+            ApplyTextStyle(existing, alignment);
             return existing;
         }
 
@@ -62,16 +69,24 @@ public class HeaderStatusUI : MonoBehaviour
         RectTransform rectTransform = textObject.GetComponent<RectTransform>();
         rectTransform.anchorMin = anchorMin;
         rectTransform.anchorMax = anchorMax;
-        rectTransform.anchoredPosition = anchoredPosition;
+        rectTransform.anchoredPosition = Vector2.zero;
         rectTransform.sizeDelta = Vector2.zero;
 
         Text createdText = textObject.GetComponent<Text>();
-        createdText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        createdText.fontSize = 40;
-        createdText.alignment = alignment;
-        createdText.color = Color.white;
-        createdText.raycastTarget = false;
+        ApplyTextStyle(createdText, alignment);
 
         return createdText;
+    }
+
+    private void ApplyTextStyle(Text text, TextAnchor alignment)
+    {
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 34;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 20;
+        text.resizeTextMaxSize = 34;
+        text.alignment = alignment;
+        text.color = Color.white;
+        text.raycastTarget = false;
     }
 }

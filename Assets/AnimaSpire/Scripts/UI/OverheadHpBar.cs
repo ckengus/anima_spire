@@ -6,6 +6,7 @@ public class OverheadHpBar : MonoBehaviour
     [SerializeField] private EnemyUnit enemy;
     [SerializeField] private Vector2 barSize = new Vector2(0.9f, 0.08f);
     [SerializeField] private float verticalOffset = 0.75f;
+    [SerializeField] private float viewportHorizontalPadding = 0.08f;
     [SerializeField] private Color backgroundColor = new Color(0.08f, 0.08f, 0.08f, 0.85f);
     [SerializeField] private Color fillColor = new Color(0.2f, 0.95f, 0.25f, 1f);
 
@@ -71,12 +72,42 @@ public class OverheadHpBar : MonoBehaviour
         }
 
         float ratio = GetHpRatio();
+        float horizontalOffset = GetViewportClampLocalOffset();
 
-        backgroundRenderer.transform.localPosition = new Vector3(0f, verticalOffset, 0f);
+        backgroundRenderer.transform.localPosition = new Vector3(horizontalOffset, verticalOffset, 0f);
         backgroundRenderer.transform.localScale = new Vector3(barSize.x, barSize.y, 1f);
 
-        fillRenderer.transform.localPosition = new Vector3(-barSize.x * (1f - ratio) * 0.5f, verticalOffset, -0.01f);
+        fillRenderer.transform.localPosition = new Vector3(horizontalOffset - barSize.x * (1f - ratio) * 0.5f, verticalOffset, -0.01f);
         fillRenderer.transform.localScale = new Vector3(barSize.x * ratio, barSize.y, 1f);
+    }
+
+    private float GetViewportClampLocalOffset()
+    {
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null || !mainCamera.orthographic)
+        {
+            return 0f;
+        }
+
+        float parentScaleX = Mathf.Abs(transform.lossyScale.x);
+        if (parentScaleX <= 0f)
+        {
+            return 0f;
+        }
+
+        float halfBarWidth = barSize.x * parentScaleX * 0.5f;
+        float halfViewportWidth = mainCamera.orthographicSize * mainCamera.aspect;
+        float minX = mainCamera.transform.position.x - halfViewportWidth + halfBarWidth + viewportHorizontalPadding;
+        float maxX = mainCamera.transform.position.x + halfViewportWidth - halfBarWidth - viewportHorizontalPadding;
+
+        if (minX > maxX)
+        {
+            return 0f;
+        }
+
+        float clampedWorldX = Mathf.Clamp(transform.position.x, minX, maxX);
+        float worldOffset = clampedWorldX - transform.position.x;
+        return worldOffset / parentScaleX;
     }
 
     private float GetHpRatio()

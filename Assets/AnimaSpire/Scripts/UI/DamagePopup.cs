@@ -27,7 +27,7 @@ public class DamagePopup : MonoBehaviour
         canvas.sortingOrder = 40;
 
         RectTransform canvasRect = popupObject.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(120f, 48f);
+        canvasRect.sizeDelta = new Vector2(150f, 56f);
         canvasRect.localScale = new Vector3(0.01f, 0.01f, 0.01f);
 
         GameObject textObject = new GameObject("DamageText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
@@ -41,7 +41,7 @@ public class DamagePopup : MonoBehaviour
 
         Text text = textObject.GetComponent<Text>();
         text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = 36;
+        text.fontSize = 42;
         text.alignment = TextAnchor.MiddleCenter;
         text.color = Color.white;
         text.raycastTarget = false;

@@ -52,34 +52,111 @@ public class EquipmentPanelController : MonoBehaviour
 
     private void EnsureUi()
     {
-        Text titleText = EnsureText("EquipmentTitleText", "Equipment Panel", 42, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.78f), new Vector2(0.92f, 0.92f));
+        Transform contentRoot = EnsureContentRoot();
+
+        Text titleText = EnsureText(contentRoot, "EquipmentTitleText", "Equipment", 44, TextAnchor.MiddleCenter, 88f);
         titleText.raycastTarget = false;
 
-        costText = EnsureText("MagicBookCostText", string.Empty, 30, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.66f), new Vector2(0.92f, 0.76f));
-        aMagicBookCountText = EnsureText("AMagicBookCountText", string.Empty, 30, TextAnchor.MiddleLeft, new Vector2(0.12f, 0.56f), new Vector2(0.88f, 0.64f));
-        bMagicBookCountText = EnsureText("BMagicBookCountText", string.Empty, 30, TextAnchor.MiddleLeft, new Vector2(0.12f, 0.48f), new Vector2(0.88f, 0.56f));
-        currentMagicBookText = EnsureText("CurrentMagicBookText", "Current MagicBook: None", 30, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.38f), new Vector2(0.92f, 0.46f));
-        lastResultText = EnsureText("LastSummonResultText", "Last Result: None", 28, TextAnchor.MiddleCenter, new Vector2(0.08f, 0.27f), new Vector2(0.92f, 0.37f));
-        equipAButton = EnsureButton("EquipAMagicBookButton", "Equip A MagicBook", new Vector2(0.08f, 0.16f), new Vector2(0.48f, 0.25f), OnEquipAButtonClicked);
-        equipBButton = EnsureButton("EquipBMagicBookButton", "Equip B MagicBook", new Vector2(0.52f, 0.16f), new Vector2(0.92f, 0.25f), OnEquipBButtonClicked);
-        summonButton = EnsureButton("SummonMagicBookButton", "Summon MagicBook", new Vector2(0.2f, 0.04f), new Vector2(0.8f, 0.13f), OnSummonButtonClicked);
+        costText = EnsureText(contentRoot, "MagicBookCostText", string.Empty, 32, TextAnchor.MiddleCenter, 64f);
+        aMagicBookCountText = EnsureText(contentRoot, "AMagicBookCountText", string.Empty, 34, TextAnchor.MiddleLeft, 64f);
+        bMagicBookCountText = EnsureText(contentRoot, "BMagicBookCountText", string.Empty, 34, TextAnchor.MiddleLeft, 64f);
+        currentMagicBookText = EnsureText(contentRoot, "CurrentMagicBookText", "MagicBook: None", 32, TextAnchor.MiddleCenter, 76f);
+        lastResultText = EnsureText(contentRoot, "LastSummonResultText", "Result: None", 30, TextAnchor.MiddleCenter, 76f);
+
+        Transform equipButtonRow = EnsureHorizontalRow(contentRoot, "EquipButtonRow", 104f);
+        equipAButton = EnsureButton(equipButtonRow, "EquipAMagicBookButton", "Equip A", OnEquipAButtonClicked);
+        equipBButton = EnsureButton(equipButtonRow, "EquipBMagicBookButton", "Equip B", OnEquipBButtonClicked);
+        summonButton = EnsureButton(contentRoot, "SummonMagicBookButton", "Summon MagicBook", OnSummonButtonClicked, 112f);
     }
 
-    private Text EnsureText(string objectName, string textValue, int fontSize, TextAnchor alignment, Vector2 anchorMin, Vector2 anchorMax)
+    private Transform EnsureContentRoot()
     {
-        Transform existing = transform.Find(objectName);
-        GameObject textObject = existing != null ? existing.gameObject : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        textObject.transform.SetParent(transform, false);
+        const string objectName = "EquipmentContent";
+        Transform existing = FindChildByName(transform, objectName);
+        GameObject contentObject = existing != null ? existing.gameObject : new GameObject(objectName, typeof(RectTransform));
+        contentObject.transform.SetParent(transform, false);
 
-        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
-        rectTransform.anchorMin = anchorMin;
-        rectTransform.anchorMax = anchorMax;
+        RectTransform rectTransform = contentObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.06f, 0.06f);
+        rectTransform.anchorMax = new Vector2(0.94f, 0.94f);
         rectTransform.anchoredPosition = Vector2.zero;
         rectTransform.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup layoutGroup = contentObject.GetComponent<VerticalLayoutGroup>();
+        if (layoutGroup == null)
+        {
+            layoutGroup = contentObject.AddComponent<VerticalLayoutGroup>();
+        }
+
+        layoutGroup.padding = new RectOffset(12, 12, 8, 8);
+        layoutGroup.spacing = 14f;
+        layoutGroup.childAlignment = TextAnchor.UpperCenter;
+        layoutGroup.childControlWidth = true;
+        layoutGroup.childControlHeight = true;
+        layoutGroup.childForceExpandWidth = true;
+        layoutGroup.childForceExpandHeight = false;
+
+        return contentObject.transform;
+    }
+
+    private Transform EnsureHorizontalRow(Transform parent, string objectName, float preferredHeight)
+    {
+        Transform existing = FindChildByName(parent, objectName);
+        GameObject rowObject = existing != null ? existing.gameObject : new GameObject(objectName, typeof(RectTransform));
+        rowObject.transform.SetParent(parent, false);
+
+        LayoutElement layoutElement = rowObject.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+        {
+            layoutElement = rowObject.AddComponent<LayoutElement>();
+        }
+
+        layoutElement.minHeight = preferredHeight;
+        layoutElement.preferredHeight = preferredHeight;
+
+        HorizontalLayoutGroup layoutGroup = rowObject.GetComponent<HorizontalLayoutGroup>();
+        if (layoutGroup == null)
+        {
+            layoutGroup = rowObject.AddComponent<HorizontalLayoutGroup>();
+        }
+
+        layoutGroup.spacing = 20f;
+        layoutGroup.childAlignment = TextAnchor.MiddleCenter;
+        layoutGroup.childControlWidth = true;
+        layoutGroup.childControlHeight = true;
+        layoutGroup.childForceExpandWidth = true;
+        layoutGroup.childForceExpandHeight = true;
+
+        return rowObject.transform;
+    }
+
+    private Text EnsureText(Transform parent, string objectName, string textValue, int fontSize, TextAnchor alignment, float preferredHeight)
+    {
+        Transform existing = FindChildByName(transform, objectName);
+        GameObject textObject = existing != null ? existing.gameObject : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = Vector2.zero;
+
+        LayoutElement layoutElement = textObject.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+        {
+            layoutElement = textObject.AddComponent<LayoutElement>();
+        }
+
+        layoutElement.minHeight = preferredHeight;
+        layoutElement.preferredHeight = preferredHeight;
 
         Text text = textObject.GetComponent<Text>();
         text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         text.fontSize = fontSize;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 22;
+        text.resizeTextMaxSize = fontSize;
         text.alignment = alignment;
         text.color = Color.white;
         text.raycastTarget = false;
@@ -88,17 +165,27 @@ public class EquipmentPanelController : MonoBehaviour
         return text;
     }
 
-    private Button EnsureButton(string objectName, string label, Vector2 anchorMin, Vector2 anchorMax, UnityEngine.Events.UnityAction onClick)
+    private Button EnsureButton(Transform parent, string objectName, string label, UnityEngine.Events.UnityAction onClick, float preferredHeight = 96f)
     {
-        Transform existing = transform.Find(objectName);
+        Transform existing = FindChildByName(transform, objectName);
         GameObject buttonObject = existing != null ? existing.gameObject : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        buttonObject.transform.SetParent(transform, false);
+        buttonObject.transform.SetParent(parent, false);
 
         RectTransform rectTransform = buttonObject.GetComponent<RectTransform>();
-        rectTransform.anchorMin = anchorMin;
-        rectTransform.anchorMax = anchorMax;
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
         rectTransform.anchoredPosition = Vector2.zero;
         rectTransform.sizeDelta = Vector2.zero;
+
+        LayoutElement layoutElement = buttonObject.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+        {
+            layoutElement = buttonObject.AddComponent<LayoutElement>();
+        }
+
+        layoutElement.minHeight = preferredHeight;
+        layoutElement.preferredHeight = preferredHeight;
+        layoutElement.flexibleWidth = 1f;
 
         Image image = buttonObject.GetComponent<Image>();
         image.color = new Color(0.2f, 0.24f, 0.32f, 0.95f);
@@ -129,13 +216,30 @@ public class EquipmentPanelController : MonoBehaviour
 
         Text text = textObject.GetComponent<Text>();
         text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = 32;
+        text.fontSize = 34;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 22;
+        text.resizeTextMaxSize = 34;
         text.alignment = TextAnchor.MiddleCenter;
         text.color = Color.white;
         text.raycastTarget = false;
         text.text = label;
 
         return text;
+    }
+
+    private Transform FindChildByName(Transform root, string objectName)
+    {
+        Transform[] children = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < children.Length; i++)
+        {
+            if (children[i].name == objectName)
+            {
+                return children[i];
+            }
+        }
+
+        return null;
     }
 
     private void Subscribe()
@@ -182,12 +286,12 @@ public class EquipmentPanelController : MonoBehaviour
     {
         if (equipmentManager == null)
         {
-            SetLastResult("Last Result: Equipment system is not ready.");
+            SetLastResult("Result: Equipment system is not ready.");
             return;
         }
 
         equipmentManager.TrySummonMagicBook(out EquipmentDefinition _, out string message);
-        SetLastResult($"Last Result: {message}");
+        SetLastResult($"Result: {message}");
         RefreshOwnedCounts();
     }
 
@@ -205,12 +309,12 @@ public class EquipmentPanelController : MonoBehaviour
     {
         if (equipmentManager == null)
         {
-            SetLastResult("Last Result: Equipment system is not ready.");
+            SetLastResult("Result: Equipment system is not ready.");
             return;
         }
 
         equipmentManager.TryEquipMagicBook(id, out string message);
-        SetLastResult($"Last Result: {message}");
+        SetLastResult($"Result: {message}");
         RefreshCurrentMagicBook();
     }
 
@@ -253,7 +357,7 @@ public class EquipmentPanelController : MonoBehaviour
         }
 
         int cost = equipmentManager != null ? equipmentManager.MagicBookCost : 10;
-        costText.text = $"MagicBook Summon Cost: {cost} Gold";
+        costText.text = $"Summon Cost: {cost} Gold";
     }
 
     private void RefreshOwnedCounts()
@@ -294,18 +398,18 @@ public class EquipmentPanelController : MonoBehaviour
 
         if (!key.HasValue)
         {
-            currentMagicBookText.text = "Current MagicBook: None";
+            currentMagicBookText.text = "MagicBook: None";
             return;
         }
 
         EquipmentStackKey value = key.Value;
         if (EquipmentCatalog.TryGetDefinition(value.id, value.tier, out EquipmentDefinition definition))
         {
-            currentMagicBookText.text = $"Current MagicBook: {definition.displayName} {value.tier} (+{definition.bonusAttackPower} ATK)";
+            currentMagicBookText.text = $"MagicBook: {definition.displayName} {value.tier} (+{definition.bonusAttackPower} ATK)";
             return;
         }
 
-        currentMagicBookText.text = $"Current MagicBook: {value.id} {value.tier}";
+        currentMagicBookText.text = $"MagicBook: {value.id} {value.tier}";
     }
 
     private void SetLastResult(string text)
