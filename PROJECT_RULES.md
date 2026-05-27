@@ -1,822 +1,806 @@
-# Anima Spire Project Rules v0.5
+# PROJECT_RULES.md v0.6
 
-Last updated: 2026-05-27
+Authoring notes for this document:
 
-Current baseline: Minimum MVP completed on main branch
+- This document must be written in English.
+- This document is the single self-contained project rule file for Codex.
+- Codex must be able to understand the current project direction, implementation rules, forbidden changes, Git rules, Unity rules, and current MVP scope by reading this file only.
+- Do not write this document as a summary that depends on Google Drive documents, chat history, external links, or other planning files.
+- Do not reference other documents as required reading.
+- Do not use phrases such as "see the planning document", "refer to Drive", or "as discussed previously" as a substitute for actual rules.
+- If a future GPT rewrites this document, it must preserve the self-contained nature of the file.
+- If a future GPT updates this document, it must keep the document in English even if the user conversation is in Korean.
+- Keep implementation rules explicit and operational, because Codex will use this file as a working standard.
+- Do not remove forbidden items unless the user explicitly decides to change the project direction.
 
-## 1. Project Overview
+---
 
-Anima Spire is a 2D portrait mobile idle RPG prototype made in Unity.
+## 1. Purpose
 
-The current baseline is not the full game.
+This document defines the top-level working rules for the Anima Spire Unity project.
 
-The current baseline is the completed minimum MVP that verifies the following loop:
+Codex must treat this file as the highest project-specific implementation standard.
 
-- Automatic combat
-- Gold reward
-- Stage progression
-- MagicBook summon
-- MagicBook equip
-- Weapon Slot Upgrade
-- Hero damage growth
-- Save / load
-- Debug Reset
-- Android device execution
+Codex may not assume that it has access to Google Drive documents, previous chat history, planning discussions, or external project documents. This file is intentionally self-contained.
 
-Anima Spire's core fun is not infinite repetition by itself.
+Codex must not perform broad redesigns, planning changes, SaveData changes, scene changes, or Git operations unless the current user task explicitly allows them.
 
-The core loop is:
+---
 
-- Enemy gets stronger.
-- Player eventually gets blocked.
-- Player grows through rewards, equipment, and other growth systems.
-- Player breaks through the blocked Stage.
-- Player reaches a higher wall.
-- The loop repeats.
+## 2. Project Overview
 
-Do not build the full game at once.
+Project name: Anima Spire
 
-Every implementation must be small, safe, readable, and testable.
+Engine: Unity
 
-## 2. Development Premise
+Target format: Mobile portrait 2D game
 
-- The project owner is a non-programmer using AI coding tools.
-- GPT is used for planning, design, document writing, and PM work.
-- Gemini Pro is used to validate design proposals and implementation request consistency.
-- Claude is used for counter-review and risk review.
-- Codex / Claude Code are used for implementation and debugging.
-- Codex must follow this PROJECT_RULES.md and the user-provided task instruction.
-- Google Drive documents under the Anima Spire folder are project references.
-- For implementation, prioritize this PROJECT_RULES.md, the current task instruction, and the current code state.
-- AI review documents are reference records from the decision-making process. They may not be the latest source of truth.
-- All work must be split into small, safe, readable, and easy-to-test units.
+Primary screen ratio: 9:16 portrait
 
-## 3. Source of Truth
+Current genre direction: automatic combat, collection, growth, and magic-build RPG
 
-Use the following priority order when references conflict:
+Anima Spire is no longer a spirit-collection RPG.
 
-1. Current main branch implementation
-2. Current user task instruction
-3. This PROJECT_RULES.md
-4. Latest Google Drive planning / operation / handoff documents
-5. AI review documents and old task instructions
+The current concept is a magic research and magic-scroll customization RPG.
 
-AI review documents are not implementation commands.
+The player character is a novice mage who has just graduated from a magic tower. On the way back to the hometown, the mage discovers that the village is under attack, saves the village, opens a personal magic laboratory, receives requests from nearby villages, and grows by researching and using magic scrolls.
 
-Use only the user's final decision and current task instruction for implementation.
+The game is based on automatic combat, but the long-term depth comes from magic scroll loadouts, spell order, spell cooldowns, spell rarity, mastery, enchantments, chains, resonance, equipment growth, and challenge content.
 
-## 4. Current MVP Baseline
+---
 
-Current minimum MVP loop:
+## 3. Current Core Concept
 
-- Hero and Spirit attack Enemy.
-- Enemy attacks Hero.
-- Spirit has no HP and is not an enemy attack target.
-- Enemy takes damage and dies.
-- Enemy death grants Gold.
-- Enemy death advances Stage.
-- Gold is used for MagicBook summon and Weapon Slot Upgrade.
-- Equipped MagicBook increases Hero damage.
-- Weapon Slot Level increases Hero damage when a MagicBook is equipped.
-- Progress is saved and loaded automatically.
-- Debug Reset can clear progress for testing.
-- Android device execution has been verified.
-
-Do not casually change Stage / Area progression.
-
-Current new Area softlock prevention is handled by enemy difficulty overlap, not by returning to the previous Area.
-
-Do not implement previous Area fallback farming unless explicitly requested.
-
-## 5. Spirit Combat Rules
-
-- Spirit does not have HP.
-- SpiritUnit must not contain HP-related fields such as maxHp, currentHp, hp, or health.
-- Spirit is not an enemy attack target.
-- Spirit does not die during combat.
-- Spirit only performs attack or support roles.
-- The only defeat condition is Hero HP reaching 0.
-- Enemy always attacks Hero, not Spirit.
-- Do not display Spirit HP bars.
-
-## 6. Screen Structure
-
-Anima Spire is a portrait mobile game.
-
-Current Battle tab MVP layout:
-
-- Combat area: top 50%
-- Info area: middle 40%
-- Bottom menu: bottom 10%
-
-Current Equipment tab MVP layout:
-
-- Bottom menu remains at bottom 10%.
-- Equipment overlay uses the upper 90%.
-- Combat background may remain dimmed behind the overlay.
-
-Current HUD:
-
-- Stage / Gold / DEBUG RESET are displayed as top combat HUD cards.
-- The old HeaderPanel-centered four-area layout is not the current active MVP layout.
-- Safe Area top inset is minimally considered for HUD placement.
-
-Current assumptions:
-
-- Portrait mobile screen is the primary target.
-- Rotation is not supported in the current MVP.
-- Android status bar policy is not finalized.
-- Landscape, tablet, foldable, and full Safe Area policies are future work.
-
-Hero, Spirit, and Enemy are world objects, not children of the UI Canvas.
-
-## 7. Scene Rules
-
-- The main prototype scene is Assets/AnimaSpire/Scenes/MainPrototype.unity.
-- Do not modify SampleScene unless explicitly requested.
-- Test in MainPrototype unless the task explicitly names another scene.
-- Do not modify scene or prefab references casually.
-- Runtime UI may be created or adjusted by scripts.
-- Do not make large ProjectSettings changes unless explicitly requested.
-
-## 8. Current Implementation Status
-
-Implemented:
-
-- Unity project base structure
-- PROJECT_RULES.md
-- MainPrototype scene
-- Portrait mobile MVP UI
-- Battle / Equipment tab switching
-- Automatic combat loop
-- Hero and Spirit attack Enemy
-- Enemy attacks Hero
-- Spirit has no HP
-- Spirit is not an enemy attack target
-- Gold reward on Enemy defeat
-- Stage progression
-- Stage starts at 1-1
-- StageDifficultyCalculator
-- Hero HP text / UI display
-- Hero overhead HP bar
-- Enemy overhead HP bar
-- Damage Popup
-- A MagicBook T0
-- B MagicBook T0
-- MagicBook summon
-- MagicBook equip
-- Equipment owned count state
-- A/B MagicBook attack bonus +3
-- Weapon Slot Upgrade
-- weaponSlotLevel save/load
-- Local JSON save/load
-- Dirty-based autosave
-- Debug Reset Progress
-- Android save/load validation
-- Area 2 entry
-- New Area first-stage softlock prevention
+The current core concept is as follows.
 
-Not implemented unless explicitly requested:
+1. The spirit collection and growth concept is removed from this game.
+2. The player character is a mage, not a spirit summoner.
+3. The main collection and growth target is the magic scroll, not spirits.
+4. Combat should ultimately contain only the hero and enemies.
+5. The former structure of one hero skill plus five spirit skills is replaced by six magic scroll slots.
+6. Hero equipment provides pure stat growth.
+7. Magic scrolls are not equipment and must be managed in the magic system, not in the equipment system.
+8. The former spirit headquarters concept is replaced by the magic laboratory.
+9. Guild or clan concepts should be named and themed as an academic society.
+10. Magic effects and impact feedback are the core visual appeal of combat.
 
-- Equipment synthesis
-- T1+ equipment
-- Equipment disassembly
-- Equipment fixed options
-- Equipment random options
-- Equipment detail page
-- Full 9 equipment slot UI
-- Staff / Wand / Magic Scroll
-- Spirit collection / growth system
-- Spirit menu
-- Spirit stones
-- Boss system
-- Offline rewards
-- Server save
-- Account / login
-- Ads
-- In-app purchases
-- PVP
-- Guilds
-- Clan
-- Co-op
-- Networking
-- Coordinate-based combat
-- Multiple enemies
-- Active chain
+Codex must not reintroduce spirit collection, spirit growth, spirit affection, spirit headquarters, spirit probability facilities, spirit character release plans, or spirit-based five-skill structures as active project systems.
 
-## 9. Currency Rules
+---
 
-Gold:
+## 4. Current Implementation Status
 
-- Current MVP currency.
-- Main source: Enemy defeat.
-- Current uses:
-  - MagicBook summon
-  - Weapon Slot Upgrade
-- Gold is not a paid currency.
-- Gold is not used for a direct Hero attack upgrade button.
-- Do not add a direct Gold-to-Hero attack upgrade button unless explicitly requested.
+The project has completed the initial minimum MVP and the coordinate-based combat minimum MVP.
 
-Future currencies such as Nature Essence, Spiritstone Shard, and Spire Stone are not implemented.
+The following features are currently implemented or considered complete.
 
-Do not add additional currencies unless explicitly requested.
+1. MainPrototype scene-based combat
+2. 9:16 mobile portrait UI foundation
+3. Hero and enemy combat
+4. Enemy defeat
+5. Gold acquisition
+6. Stage progression
+7. Hero defeat handling
+8. Save and Load
+9. Debug Reset
+10. Minimal equipment summon and equip flow
+11. Weapon Slot Upgrade
+12. Hero attack power increase
+13. Coordinate-based enemy movement
+14. Hero and enemy range checks
+15. Hero Projectile Pool
+16. Projectile damage on arrival
+17. StageToken-based ghost hit prevention
+18. Stabilized combat end resolution
+19. Android device testing completed
 
-## 10. Offline Reward Rules
+The coordinate-based combat minimum MVP was completed through step 030F.
 
-Offline rewards are not implemented.
+The next major MVP is 031: Hero Equipment and Growth System Minimum MVP.
 
-Do not implement offline rewards unless explicitly requested.
+---
 
-If offline rewards are implemented later, handle them as a separate feature because they affect save/load, time calculation, and balance.
+## 5. Current Unity Scene Standard
 
-## 11. Equipment Direction
+The current development scene is MainPrototype.
 
-Equipment is already part of the current MVP baseline.
+Do not modify SampleScene.
 
-Current MVP equipment:
+Codex must not open, edit, save, or intentionally modify SampleScene unless the user explicitly asks for it.
 
-- A MagicBook T0
-- B MagicBook T0
-- A/B summon
-- A/B equip
-- Owned count save/load
-- Equipped MagicBook save/load
-- Weapon Slot Upgrade
+Any scene work must be based on MainPrototype.
 
-Equipment uses a collection-style equipment structure.
+After Unity work, Codex must check whether unintended scene changes occurred.
 
-Equipment is not an infinite inventory of duplicated individual option items.
+---
 
-Equipment does not use individual item levels.
+## 6. Screen and Platform Standard
 
-Do not add EquipmentSaveData.level.
+Anima Spire is a mobile portrait game.
 
-Current predictable growth is Weapon Slot Upgrade.
+UI must be designed for a 9:16 portrait screen.
 
-Do not add a direct Gold-to-Hero attack upgrade button unless explicitly requested.
+Android device testing is an important validation standard.
 
-## 12. Equipment Types
+When working on UI, Codex must consider the following.
 
-Final equipment structure target:
+1. Text must be readable on a mobile portrait screen.
+2. Buttons must be large enough for finger touch input.
+3. Text must not be too small.
+4. Information density must not be excessive.
+5. Layout must not break in portrait mode.
+6. The Android device screen must not crop or overlap important UI.
+7. Touch targets must not conflict with each other.
 
-- 8 stat equipment slots
-- 1 central special equipment slot
+---
 
-Stat equipment slots:
+## 7. MVP Numbering Standard
 
-Attack-side:
+MVP numbers use three digits.
 
-- Weapon
-- Necklace
-- Ring
-- Belt
+Substeps inside one MVP use letters A, B, C, and so on.
 
-Defense / HP-side:
+Example:
 
-- Hat
-- Robe
-- Gloves
-- Shoes
+031: Hero Equipment and Growth System Minimum MVP
+031A: Build the 8-slot hero equipment UI skeleton
+031B: Connect existing equipment data to the UI
+031C: Organize equipment detail information and owned quantity display
 
-Central special slot:
+The same numbering must be used in branch names, work instructions, completion reports, and commit messages.
 
-- Magic Scroll
+Codex must not work beyond the specified MVP substep unless the current user task explicitly allows it.
 
-Current MVP only implements A/B MagicBook as weapon-type test equipment.
+---
 
-MagicBook is not a separate final equipment slot.
+## 8. Current Next MVP: 031 Hero Equipment and Growth System Minimum MVP
 
-MagicBook belongs under Weapon Slot.
+The next work package is 031 Hero Equipment and Growth System Minimum MVP.
 
-Use Weapon Slot as the current slot name.
+The purpose of 031 is to redefine hero equipment as a pure stat growth system after the concept transition.
 
-Do not create a MagicBook-specific slot name.
+031 is divided into the following steps.
 
-## 13. Equipment Tier Rules
+1. 031A: Build the 8-slot hero equipment UI skeleton
+2. 031B: Connect existing equipment data to the UI
+3. 031C: Organize equipment detail information and owned quantity display
+4. 031D: Review the equipmentId, tier, and count structure and prepare data transition
+5. 031E: Implement the first version of tier-based fixed stat application
+6. 031F: Implement minimal equipment promotion or synthesis
+7. 031G: Stabilize equipment growth Save and Load and perform Android testing
+8. 031H: Write the completion reflection and prepare the next phase
 
-- Equipment has tier.
-- Current MVP implements only T0 MagicBooks.
-- T1+ equipment is not implemented yet.
-- Equipment does not have individual item level.
-- Same equipment and same tier can be collected in quantity.
-- Future synthesis uses same equipment and same tier quantity to create a higher tier.
-- MVP does not implement synthesis yet.
+031A must not implement SaveData changes, synthesis, promotion, options, magic systems, or spirit-related UI.
 
-## 14. Weapon Slot Upgrade Rules
+---
 
-Weapon Slot Upgrade is implemented in the current MVP.
+## 9. 031A Working Standard
 
-Current rules:
+The goal of 031A is to build the visual skeleton of the new hero equipment UI.
 
-- Field: weaponSlotLevel
-- Default value: 0
-- Upgrade cost: 10 * (currentLevel + 1)
-- Bonus: +1 attack per Weapon Slot Level
-- Bonus applies only when a MagicBook is equipped.
-- Saved and loaded through PlayerProgressData.weaponSlotLevel
-- Debug Reset resets weaponSlotLevel to 0.
+031A included scope:
 
-Rules:
+1. Create the equipment tab or equipment panel UI skeleton
+2. Place a hero character placeholder in the center
+3. Place four offensive equipment slots on the left
+4. Place four defensive equipment slots on the right
+5. Create eight equipment slot buttons
+6. Display equipment slot names
+7. Display placeholder equipment icons
+8. Display a selected equipment summary card placeholder
+9. Add a detail button placeholder
+10. Add change or unequip button placeholders
+11. Do not include any magic scroll slot in the equipment screen
 
-- Do not add MagicBook-specific slot logic.
-- Do not use obsolete MagicBook-specific slot field names.
-- Do not add individual equipment levels.
-- UI must not directly modify Gold or slot level.
-- Use EquipmentManager domain methods for upgrade behavior.
-- Loading saved slot level must not spend Gold.
-- Loading saved slot level must not trigger dirty/save/gameplay events.
+031A excluded scope:
 
-## 15. Equipment Option Direction
+1. SaveData changes
+2. EquipmentSaveData.cs changes
+3. PlayerProgressData.cs changes
+4. Equipment synthesis
+5. Equipment promotion
+6. Equipment options
+7. Equipment summon probability correction
+8. Magic scroll UI
+9. Magic system implementation
+10. Spirit-related UI
+11. Long Press implementation
+12. Real equipment data changes
+13. Hero stat calculation changes
 
-Equipment options are future content.
+031A is a UI skeleton step. Codex must not change the data structure during 031A.
 
-Do not implement the following unless explicitly requested:
+---
 
-- Fixed options
-- Random options
-- Option bank
-- Option reroll
-- Option replacement
-- Equipment detail page
+## 10. Hero Equipment Standard
 
-## 16. MagicBook MVP Scope
+Hero equipment is a pure stat growth system.
 
-Current MagicBook MVP:
+Magic scrolls are not hero equipment.
 
-- A MagicBook and B MagicBook exist.
-- Summon result is A or B with 50% / 50% probability.
-- Only T0 appears.
-- A MagicBook T0 attack bonus: +3
-- B MagicBook T0 attack bonus: +3
-- Player can own A/B MagicBook counts.
-- Player can equip A or B MagicBook.
-- Equipped MagicBook affects Hero attack damage.
-- Owned counts are saved/loaded.
-- Equipped MagicBook state is saved/loaded.
+Do not add a magic scroll slot to the equipment screen.
 
-Not implemented:
+Hero equipment consists of eight equipment types.
 
-- Synthesis
-- Disassembly
-- T1+ equipment
-- Random options
-- Fixed option best value
-- Equipment detail page
-- Full 9 equipment slot UI
+Four offensive equipment types:
 
-## 17. Stage / Difficulty / Gold Rules
+1. Weapon
+2. Necklace
+3. Earring
+4. Ring
 
-Enemy difficulty index:
+Four defensive equipment types:
 
-enemyDifficultyIndex = ((area - 1) * 8) + stage
+1. Hat
+2. Outfit
+3. Gloves
+4. Shoes
 
-Purpose:
+The previously discussed Belt slot is removed from the eight equipment types.
 
-- New Area Stage 1 should not be harder than the previous Area Stage 9.
-- Example: 1-9 and 2-1 have the same enemy difficulty.
-- This prevents new Area first-stage softlock without returning to the previous Area.
+The equipment system must not be mixed with the magic system.
 
-Gold reward index:
+Equipment provides pure stat growth such as attack, HP, defense, and similar base stats.
 
-globalStageIndex = (area - 1) * 10 + stage
+---
 
-Gold reward:
+## 11. Equipment Growth Standard
 
-Gold Reward = 10 + (globalStageIndex - 1) * 5
+Equipment is managed by equipmentId.
 
-Examples:
+Equipment with the same equipmentId is treated as the same equipment.
 
-- 1-10 = 55 Gold
-- 2-1 = 60 Gold
+Do not create and store unlimited individual equipment instances.
 
-Important:
+The core growth unit of equipment is tier.
 
-- Enemy difficulty index and Gold reward index are intentionally different.
-- Do not change 2-1 into a harder stage than 1-10 unless explicitly requested.
-- Do not make 2-1 reward fall back to 10 Gold.
-- Do not change Stage / Area progression casually.
-- X-10 is intended as a future Boss Stage position, but the current Boss system is not implemented.
+Tier is the growth stage of the equipment.
 
-## 18. Save / Load Rules
+Tier is not equipment level.
 
-Current save system:
+Owned quantity is treated like promotion material.
 
-- PlayerProgressData
-- EquipmentSaveData
-- dataVersion = 1
-- LocalProgressSaveRepository
-- Application.persistentDataPath
-- player_progress.json
-- Dirty-based autosave
+The fixed stat of the highest owned tier is applied.
 
-Current saved fields:
+Example:
 
-- dataVersion
-- lastClearedArea
-- lastClearedStage
-- gold
-- weaponSlotLevel
-- ownedEquipment
-- equippedMagicBookKey
+Wooden Staff T0 owned quantity 5: apply T0 fixed stat
+Wooden Staff T1 owned quantity 1: apply T1 fixed stat
+Wooden Staff T0 owned quantity 20 and T2 owned quantity 1: apply T2 fixed stat
 
-Save/load rules:
+For MVP implementation, fixed stats should first use a simple absolute-value table.
 
-- Do not change dataVersion unless explicitly instructed.
-- Use ForLoad-style methods when applying saved data.
-- Loading must not spend Gold.
-- Loading must not call MarkDirty.
-- Loading must not call ScheduleSaveSoon.
-- Loading must not trigger gameplay events.
-- UI must not directly edit save data.
-- Save events should be handled through ProgressSaveManager.
+Main options are not updated by promotion.
 
-Current autosave policy:
+Selectable options are not updated by promotion.
 
-- Gold change: dirty
-- Stage progress: dirty
-- MagicBook summon: dirty + SaveSoon
-- MagicBook equip: dirty
-- Weapon Slot Upgrade: dirty + SaveSoon
-- OnApplicationPause(true): save pending dirty data
-- OnApplicationQuit: backup save
+Main options and selectable options may only be updated or acquired when obtaining or summoning equipment.
 
-## 19. Debug Reset Rules
+Do not implement main options or selectable options in early MVP steps unless the user explicitly assigns that step.
 
-Debug Reset is a development/test feature.
+---
 
-Current reset result:
+## 12. Equipment Forbidden Rules
 
-- Stage returns to 1-1.
-- Gold becomes 0.
-- ownedEquipment becomes empty.
-- equippedMagicBookKey becomes empty.
-- weaponSlotLevel becomes 0.
-- Save file is deleted.
-- Scene reloads.
+The following are forbidden.
 
-Rules:
+1. Do not add EquipmentSaveData.level.
+2. Do not add equipment-level growth.
+3. Do not add a magic scroll slot to the equipment UI.
+4. Do not use the term MagicBook Slot.
+5. Do not add spirit-related equipment slots.
+6. Do not change SaveData in 031A.
+7. Do not implement synthesis, promotion, or options in 031A.
+8. Do not change Hero stat calculation in 031A.
+9. Do not change real equipment data structure in 031A.
 
-- Reset must prevent ghost save.
-- Do not call MarkDirty, ScheduleSaveSoon, SaveNow, or SaveIfDirty inside the destructive reset flow unless explicitly designed.
-- After reset and scene reload, autosave should work again normally.
-- Debug Reset is not a production account deletion feature.
+Existing code or data may still contain MagicBook-related implementation from older MVPs.
 
-## 20. Skill and Mana Rules
+Codex must not delete or broadly refactor existing MagicBook-related code unless the user explicitly requests it.
 
-- The game does not use Mana.
-- Do not add MP, Mana, Energy, or skill cost systems unless explicitly requested.
-- Hero has HP and uses repeated attacks or skills based on interval/cooldown.
-- Each companion Spirit has no HP and uses repeated attacks or support behavior.
-- Each Enemy has HP and attacks Hero.
-- Skill use does not consume Mana.
-- Ally skill UI, active skills, auto/manual skill modes, and active chain are not implemented.
-- Do not implement skill icons, active chain, or manual skill modes unless explicitly requested.
+For new user-facing UI and new project rules, do not use the term MagicBook Slot.
 
-## 21. HP UI Rules
+The current valid naming standard is Weapon Slot.
 
-- Hero has HP.
-- Enemy has HP.
-- Spirit has no HP.
-- Spirit must not display an HP bar.
-- Hero HP is displayed in the Battle UI and with an overhead HP bar.
-- Enemy HP is displayed above the Enemy unit.
-- If multiple enemies are implemented later, each Enemy should have its own HP bar.
-- Do not implement a single shared Enemy HP display as the long-term structure.
+---
 
-## 22. Damage UI Rules
+## 13. Magic Scroll Standard
 
-- Damage numbers should appear above the damaged unit.
-- If an Enemy is damaged, the damage number appears above that Enemy.
-- If Hero is damaged, the damage number appears above Hero.
-- Spirit is not a damage number target because Spirit has no HP and is not attacked.
-- Damage number should float upward and disappear after a short time.
-- Extra hit / double hit may show each hit as a separate damage number in the future.
-- Critical hit style is future content unless explicitly requested.
+Magic scrolls are the core collection, growth, and customization system of Anima Spire.
 
-## 23. Future Combat Expansion Rules
+Magic scrolls are not equipment.
 
-Current combat is still a simple single Enemy prototype.
+Magic scrolls are managed in a separate magic tab or magic system.
 
-Current MVP uses simple direct damage with Hero/Spirit on the left and Enemy on the right.
+The magic scroll system follows these standards.
 
-Future combat may consider:
+1. The final magic slot count is six.
+2. Stage 1 starts with one magic slot.
+3. Stage 2 unlocks the second magic slot.
+4. Later stage progression gradually unlocks up to six slots.
+5. The initial spell is one 1-star Fire Arrow.
+6. The early game uses single casting only.
+7. Double casting and triple casting are later growth systems.
+8. Magic has star grades from 1-star to 6-star.
+9. Native 1-star magic can be promoted up to 6-star.
+10. A native 1-star magic promoted to 6-star should aim for roughly 80 to 90 percent efficiency of a native 6-star magic, depending on role and context.
+11. Magic gains mastery through use.
+12. One prefix enchantment and one suffix enchantment can be applied to one magic scroll.
+13. Chain design starts with 1-chain and 2-chain.
+14. 3-chain is a later expansion candidate.
+15. Magic collection passive bonuses and magic resonance are long-term systems.
 
-- Coordinate-based combat
-- Enemies appearing from different directions
-- Automatic movement
-- Targeting priorities
-- Auto / semi-auto / manual skill usage
-- Multiple enemies
-- Melee enemies
-- Ranged enemies
-- Enemy spawn positions
-- Movement based on position and range
-- Attack range
-- Projectile movement
-- Damage application when projectile reaches target
-- Boss patterns
+The 031 Hero Equipment MVP must not implement the magic scroll system.
 
-Anima Spire is not a direct movement-control action RPG.
+---
 
-Long-term movement should be automatic based on configured action algorithms or strategy presets.
+## 14. Combat System Standard
 
-Do not implement coordinate-based combat, movement, range, projectiles, collisions, or multiple enemies unless explicitly requested.
+The combat system is redefined around the hero and enemies.
 
-Current simple direct damage structure should not be rewritten into a complex projectile or collision system without explicit instruction.
+Final combat should not contain spirits.
 
-Future code changes should avoid hardcoding that blocks multi-enemy, range, targeting, movement, or projectile expansion.
+Current code may still contain SpiritUnit or other spirit-related structures from previous MVPs. Codex must not immediately delete them unless the current task explicitly says so.
 
-## 24. Story Direction
+Spirit removal must be handled in a separate safe step.
 
-Anima Spire is not a heavy long-form story RPG.
+The completed coordinate-based combat MVP structure must be preserved.
 
-It should aim for light narrative and a strong world atmosphere.
+Combat principles:
 
-- MVP does not implement cutscenes.
-- MVP does not implement long dialogue.
-- MVP does not implement complex scenario systems.
-- Long-term atmosphere can come from area names, boss names, spirit descriptions, first-clear messages, and memory fragments.
+1. The hero fights enemies.
+2. Enemies move toward the hero.
+3. Range checks are distance-based.
+4. Hero Projectile is managed by a pool.
+5. Projectiles move toward their target after firing.
+6. Projectiles apply damage on arrival.
+7. Projectile damage is snapshotted at fire time.
+8. currentStageToken prevents ghost hits.
+9. Active projectiles are returned when combat resolution begins.
+10. Gold is granted when an enemy dies.
+11. Stage advances only when the enemy dies and the hero survives.
+12. Hero death results in retreat or failure handling.
+13. If the enemy and hero die at the same time, enemy Gold is granted but the Stage does not advance.
 
-Do not implement story systems unless explicitly requested.
+---
 
-## 25. PVP / Guild Long-Term Direction
+## 15. Projectile and Physics Standard
 
-PVP, guild, clan, and cooperative content are long-term candidates only.
+The current combat system does not use physics-engine collision detection.
 
-Do not implement them unless explicitly requested.
+Projectile movement and arrival checks are vector-based.
 
-Long-term content candidates:
+The following are forbidden unless the user explicitly approves a new design.
 
-- Personal PVE stage climbing
-- Personal challenge content
-- Cooperative PVE
-- Guild / clan
-- Guild PVE
-- Personal PVP
-- Guild or clan PVP
+1. Physics2D
+2. Rigidbody2D
+3. Collider2D
+4. OnTriggerEnter2D
+5. FixedUpdate-based combat hit detection
 
-## 26. UI / Android Rules
+The Hero Projectile structure may later be expanded into a magic Projectile structure.
 
-Current MVP UI:
+Do not introduce physics-based combat unless the user specifically requests it and the design is reviewed first.
 
-- Battle tab uses Combat 50%, Info 40%, Bottom Menu 10%.
-- Equipment tab uses upper 90% overlay and keeps Bottom Menu 10%.
-- Stage / Gold / DEBUG RESET are top combat HUD cards.
-- Safe Area top inset is minimally considered.
+---
 
-UI rules:
+## 16. Laboratory Standard
 
-- UI must call domain methods instead of directly changing Gold, equipment count, or slot level.
-- Preserve Button onClick and serialized references.
-- Prioritize mobile readability and touch area.
-- Do not perform a full UI redesign unless explicitly requested.
+The former spirit headquarters is removed and replaced by the magic laboratory.
 
-Android verified:
+The laboratory unlocks after clearing Stage 1-10.
 
-- App launch
-- Combat
-- UI touch
-- Save/load
-- App restart load
-- Background return
-- Debug Reset
-
-Not finalized:
-
-- Android status bar policy
-- Unity splash removal
-- Tablet / foldable / landscape layout
-- Google Play integration
-- Ads
-- In-app purchases
-
-## 27. Strict Rules
-
-Do not add systems that were not requested.
-
-Do not implement without explicit user instruction:
-
-- Server save
-- Account / login
-- Ads
-- In-app purchases
-- Offline rewards
-- Equipment synthesis
-- T1+ equipment
-- Equipment disassembly
-- Equipment fixed options
-- Equipment random options
-- Equipment detail page
-- Full 9 equipment slots
-- Staff / Wand / Magic Scroll
-- Spirit collection / growth system
-- Spirit stones
-- Village systems
-- Boss system
-- Coordinate-based combat
-- Multiple enemies
-- Range / movement / projectile / collision systems
-- Active chain
-- Complex status effects
-- PVP
-- Guilds
-- Clan
-- Co-op
-- Networking
-- Google Play integration
-- Full UI redesign
-- External packages
-- Large ProjectSettings changes
-
-Always keep these rules:
-
-- Do not add Mana, MP, Energy, or skill cost systems unless explicitly requested.
-- Do not add Spirit HP.
-- Do not display Spirit HP bars.
-- Do not make Spirit an enemy attack target.
-- Do not modify SampleScene.
-- Do not use obsolete MagicBook-specific slot names.
-- Do not add individual equipment levels.
-- Do not add EquipmentSaveData.level.
-
-## 28. Coding Rules
-
-- Keep scripts small and readable.
-- Prefer simple MonoBehaviour scripts for the prototype.
-- Use placeholder sprites or simple Unity objects first.
-- Do not optimize prematurely.
-- Keep changes scoped to the requested task.
-- MVP features must be small.
-- Code should avoid hardcoding that blocks future expansion.
-- Keep responsibilities separated.
-- UI, domain logic, save/load logic, and Hero stat calculation should not be tightly coupled.
-- UI must not directly modify Gold, equipment count, equipped state, or slot level.
-- Use domain managers such as EquipmentManager, StageManager, GameManager, and ProgressSaveManager.
-- Save/load work must preserve ForLoad separation.
-- For equipment work, do not implement all future systems at once.
-
-After each Codex task, explain:
-
-1. What files were created
-2. What files were modified
-3. What was implemented
-4. What values or logic changed
-5. What existing behavior was preserved
-6. How to test the feature
-7. What remains incomplete or untested
-
-## 29. Test Rules
-
-- Test in MainPrototype unless the task explicitly names another scene.
-- For Unity Console tests, turn off Collapse before testing.
-- Clear the Console before pressing Play.
-- If Collapse is enabled, repeated logs may be grouped instead of appearing in time order.
-- After feature testing, confirm there are no red Console errors.
-- Confirm there are no new yellow Console warnings.
-- When testing combat loop changes, confirm Stage scaling, HP bars, Damage Popup, and Stage / Gold UI are not broken.
-- When testing equipment changes, confirm:
-  - Gold is spent correctly.
-  - A/B MagicBook count changes correctly.
-  - Equipped MagicBook changes Hero damage output.
-  - Weapon Slot Upgrade still works.
-  - Save/load still works.
-  - Debug Reset still works.
-- When testing Stage / Gold changes, confirm:
-  - 1-9 and 2-1 enemy difficulty relationship is preserved unless explicitly changed.
-  - 2-1 Gold reward does not fall back to 10.
-- When testing save-related changes, confirm:
-  - App restart load works.
-  - Debug Reset works.
-  - No ghost save occurs.
-- Android device tests are required for UI layout, Safe Area, app lifecycle, save/load lifecycle, and touch interaction changes.
-
-## 30. Git Workflow Rules
-
-Default rule for Codex:
-
-- Do not run git add.
-- Do not run git commit.
-- Do not run git push.
-- Do not run git merge.
-- Do not delete branches.
-
-Exception:
-
-- Only perform Git operations if the user explicitly instructs Codex to do so.
-
-User workflow:
-
-- Do not work directly on main for feature work unless explicitly choosing a no-code-change test.
-- Start from the latest main.
-- Create a work branch for one feature or one document update.
-- Make one small feature or document change at a time.
-- Test in Unity when code changes are made.
-- Commit the change after user verification.
-- Push the remote branch.
-- Merge into main.
-- Push main.
-- Delete merged work branches.
-
-Unity may modify unrelated files during testing. Before commit, check for unintended changes such as:
-
-- Assets/DefaultVolumeProfile.asset
-- Assets/Settings/UniversalRP.asset
-- Assets/UniversalRenderPipelineGlobalSettings.asset
-- ProjectSettings/ProjectSettings.asset
-- .utmp/
-
-Do not commit unrelated Unity-generated changes unless explicitly intended.
-
-## 31. Folder Rules
-
-Use this folder structure under Assets/AnimaSpire when possible:
-
-- Scenes
-- Scripts/Core
-- Scripts/Combat
-- Scripts/Stage
-- Scripts/Units
-- Scripts/UI
-- Scripts/Data
-- Scripts/Data/Equipment
-- Scripts/Equipment
-- Scripts/Save
-- Prefabs/Units
-- Prefabs/UI
-- Prefabs/Effects
-- Art/Characters
-- Art/Spirits
-- Art/Enemies
-- Art/UI
-- Art/Backgrounds
-- ScriptableObjects/Stages
-- ScriptableObjects/Enemies
-- ScriptableObjects/Skills
-- ScriptableObjects/Equipment
-- ScriptableObjects/Spirits
-- Audio
-- Localization
-
-Keep folder additions minimal and task-driven.
-
-## 32. Project Document Rules
-
-Google Drive under the Anima Spire folder contains project reference documents.
-
-Current document operation principles:
-
-- 01_기획문서: planning and design baseline documents
-- 02_운영규칙: operation rules and project rules
-- 03_AI작업지시: Codex task instructions and completion reports
-- 04_AI검토결과: AI review results and integrated summaries
-- 05_버그기록: major bug records
-- 06_인수인계: handoff documents
-
-Rules:
-
-- AI review documents are decision-support records and may not be the latest source of truth.
-- Codex task instruction documents and completion reports should both be saved from future work onward.
-- New project document names should use YYMMDD_순번_문서명 format.
-- Old documents do not need to be renamed unless explicitly requested.
-- Do not edit Google Drive documents unless explicitly requested.
-
-## 33. Next Development Priority
-
-After the minimum MVP, likely next development candidates are:
-
-1. Equipment synthesis MVP
-2. Equipment UI first pass
-3. Boss Stage first pass
-4. Offline Gold reward MVP
-5. Android / build packaging cleanup
-
-Do not implement any of these without an explicit user task instruction.
-
-Do not implement direct Gold-to-Hero-attack Upgrade Attack button as the next priority.
-
-Do not implement server save, account/login, ads, in-app purchases, PVP, guild, clan, co-op, networking, or full 9 equipment type UI unless explicitly requested.
-
-## 34. Codex Completion Report Requirements
-
-After every Codex task, report:
-
-1. Created files
+The laboratory is the hero's home and magic research base.
+
+For First Release, the laboratory should not be a complete complex system.
+
+The first laboratory scope should focus on opening the base, showing the next request, and connecting to equipment and magic menus.
+
+Long-term laboratory feature candidates include:
+
+1. Request board
+2. Equipment research desk
+3. Magic research desk
+4. Magic archive or research records
+5. Training room or DPS test station
+6. Special dungeon entry
+7. Raid entry
+8. Offline reward device
+9. Laboratory decoration
+10. Society communication device
+
+The laboratory is not a spirit headquarters.
+
+Do not add spirit-related facilities to the laboratory.
+
+---
+
+## 17. First Release Standard
+
+First Release is not a fully complete live-service game.
+
+First Release is the first externally playable candidate build.
+
+The core First Release goal is to verify the magic research automatic combat RPG loop:
+
+The mage progresses through stages, earns Gold and rewards, grows equipment and magic scrolls, and challenges higher stages.
+
+First Release inclusion candidates:
+
+1. Opening and early scenario
+2. Normal stage combat
+3. Hero and enemy combat structure
+4. Basic magic scroll system
+5. Gradual magic slot unlock
+6. Single-casting automatic spell use
+7. Three to five basic spells
+8. Eight hero equipment slots and basic equipment growth
+9. Gold acquisition and spending
+10. First laboratory unlock
+11. Save, Load, and Reset
+12. Android build and device testing
+
+First Release exclusions:
+
+1. Spirit collection
+2. Spirit growth
+3. Spirit affection
+4. Spirit headquarters
+5. Actual magic enchantment implementation
+6. Actual magic chain implementation
+7. Double casting
+8. Triple casting
+9. Magic collection passive bonuses
+10. Magic resonance
+11. Raid
+12. PvP
+13. Society system
+14. Actual season pass operation
+15. Real-money purchase integration
+
+---
+
+## 18. Early Scenario Standard
+
+The hero is a novice mage who has just graduated from a magic tower.
+
+The hero is returning to the hometown and discovers that the village is being attacked by beasts or enemies.
+
+The hero enters battle to save the villagers.
+
+Stage 1-1 begins.
+
+The initial owned magic is one 1-star Fire Arrow.
+
+Stages 1-1 through 1-10 are centered around Fire Arrow.
+
+Around Stage 1-3 or 1-4, when combat starts to feel slightly difficult, a villager gives the hero a wooden staff and the equipment tutorial begins.
+
+After clearing Stage 1-10, the village chief thanks the hero and gives a reward.
+
+The hero then enters the house and opens a magic laboratory.
+
+News of the rescued hometown spreads to nearby villages, and another village sends a request, leading to Stage 2-1.
+
+---
+
+## 19. SaveData Principles
+
+SaveData changes must be handled carefully.
+
+Do not change SaveData unless the current step explicitly allows it.
+
+Runtime combat state must not be saved.
+
+Do not save:
+
+1. Projectile position
+2. Projectile target
+3. Projectile timer
+4. currentStageToken
+5. Runtime position
+6. Attack timers
+7. Temporary combat state
+8. Visual effect state
+
+Save persistent progression and growth state only.
+
+Examples of save candidates:
+
+1. Gold
+2. Stage progress
+3. Equipment owned state, equipped state, and growth state
+4. Magic owned state
+5. Magic equipped slots
+6. Magic slot unlock state
+7. Laboratory unlock state
+8. Tutorial progress state
+
+When changing SaveData, review the following.
+
+1. Whether dataVersion must change
+2. Whether migration is required
+3. Impact on existing Android installed data
+4. Debug Reset behavior
+5. UI update after Load
+6. Combat runtime restart after Load
+
+031A must not change SaveData.
+
+---
+
+## 20. Debug Reset Standard
+
+Debug Reset must be preserved during development.
+
+Debug Reset deletes save data and returns the game to the initial state for testing.
+
+After Debug Reset, verify the following.
+
+1. Gold resets
+2. Stage resets
+3. Equipment state resets
+4. Magic state resets
+5. Laboratory returns to locked state
+6. Combat runtime restarts correctly
+7. UI displays correctly
+
+For public builds, Debug Reset may be hidden or limited to development builds.
+
+---
+
+## 21. Unity Auto-Modified File Warning
+
+After Unity work, always check for unintended changes in the following files or folders.
+
+1. Assets/DefaultVolumeProfile.asset
+2. Assets/Settings/UniversalRP.asset
+3. Assets/UniversalRenderPipelineGlobalSettings.asset
+4. ProjectSettings/ProjectSettings.asset
+5. .utmp/
+
+If these files are changed unintentionally, do not include them in the commit target without user confirmation.
+
+Android builds, Play Mode, or simply opening Unity settings may cause automatic changes.
+
+Codex must not include unintended Unity setting changes in a commit target.
+
+---
+
+## 22. Git Operation Standard
+
+Codex must not perform Git write operations.
+
+Codex must not run:
+
+1. git add
+2. git commit
+3. git push
+4. git merge
+5. git branch -d
+6. git push origin --delete
+7. local branch deletion
+8. remote branch deletion
+
+Codex may suggest commands for the user to run, but Codex must not run them.
+
+The user creates the working branch.
+
+Branch name examples:
+
+feature/hero-equipment-031a
+feature/hero-equipment-031b
+feature/hero-equipment-031c
+
+When merge commits are needed, commands must include the -m option so that an editor such as Vim does not open.
+
+---
+
+## 23. Codex Working Procedure
+
+Before working, Codex must check:
+
+1. Current step number
+2. Included scope
+3. Excluded scope
+4. Files allowed to modify
+5. Files forbidden to modify
+6. Whether SaveData changes are allowed
+7. Whether scene changes are allowed
+8. Test requirements
+9. Forbidden APIs
+10. Git operation restrictions
+
+Codex must not refactor outside the assigned scope.
+
+Codex must not make broad architecture changes unless explicitly requested.
+
+Codex must not pre-implement systems just because they may be useful later.
+
+Codex must write a completion report after work.
+
+The completion report must include:
+
+1. Work summary
 2. Modified files
-3. Implementation summary
-4. Changed values or logic
-5. Preserved existing behavior
-6. Unity batchmode result, if run
-7. Play Mode test result, if run
-8. Android device test result, if run
-9. Untested items
-10. Git operation status
+3. Implemented content
+4. Not implemented content
+5. Save and Load impact
+6. Test results
+7. Unity Console results
+8. Git status
+9. Unintended changed files
+10. Remaining issues
+11. Next-step cautions
 
-Git operation status must explicitly state:
+---
 
-- Git add not performed
-- Git commit not performed
-- Git push not performed
-- Git merge not performed
-- Branch delete not performed
+## 24. Code Implementation Principles
 
-If the user explicitly instructed Codex to perform Git operations, report the actual Git operations performed.
+Code implementation principles:
+
+1. Implement small MVP-scoped changes.
+2. Do not create excessive generic systems.
+3. Do not refactor unrelated code.
+4. Do not break existing behavior.
+5. Minimize SaveData changes.
+6. Do not mix UI skeleton work and data structure changes in the same step unless explicitly instructed.
+7. Use current naming standards.
+8. Do not expose deprecated concepts in new UI.
+9. Keep debug functions available for development.
+10. Consider Android device testing.
+
+---
+
+## 25. UI Implementation Principles
+
+UI implementation principles:
+
+1. Use a mobile portrait 9:16 standard.
+2. Avoid tiny text.
+3. Use touchable button sizes.
+4. Avoid overlap with bottom tabs and main panels.
+5. Make placeholder states clear.
+6. Do not make unimplemented features look functional.
+7. Do not implement Long Press in early MVPs.
+8. Prefer basic OnClick events.
+9. Prevent conflicts between scroll and button events.
+10. Do not display magic scroll slots in the equipment UI.
+
+031A equipment UI layout standard:
+
+Left offensive equipment slots:
+Weapon, Necklace, Earring, Ring
+
+Center:
+Hero character or placeholder
+
+Right defensive equipment slots:
+Hat, Outfit, Gloves, Shoes
+
+---
+
+## 26. Forbidden APIs and Forbidden Structures
+
+Unless explicitly requested and reviewed, do not use or introduce:
+
+1. Physics2D
+2. Rigidbody2D
+3. Collider2D
+4. OnTriggerEnter2D
+5. FixedUpdate-based combat hit detection
+6. Large generic ObjectPoolManager
+7. Unnecessary generic Pool Manager
+8. Unnecessary Singleton Manager
+9. Broad generic Skill Engine
+10. Large SaveData restructuring
+
+Use simple MVP-scoped implementation first.
+
+---
+
+## 27. Removed Concepts
+
+The following concepts are removed from the current game direction.
+
+1. Spirit collection
+2. Spirit growth
+3. Spirit affection
+4. Spirit headquarters
+5. Spirit dispatch
+6. Spirit probability correction
+7. Spirit character illustration collection
+8. Spirit-based five-skill structure
+9. Mixed mage plus spirit-summoner concept
+
+Old code or scene objects may still contain related remnants.
+
+Do not introduce them into new UI or new systems.
+
+Deletion must be handled in a separate safe step.
+
+---
+
+## 28. Pre-Work Checklist
+
+Before implementing, Codex must check:
+
+1. Whether the current branch is the intended work branch
+2. Whether the task targets MainPrototype
+3. Whether SampleScene is untouched
+4. Whether SaveData changes are needed
+5. Whether the current step allows SaveData changes
+6. Which files must not be modified
+7. Current naming standards
+8. Whether new spirit-related content is being introduced
+9. Whether magic scrolls are being added to equipment UI
+10. Whether EquipmentSaveData.level is being added
+
+---
+
+## 29. Post-Work Checklist
+
+After implementing, Codex must check and report:
+
+1. Modified file list
+2. Implemented content
+3. Not implemented content
+4. Console Error status
+5. Console Warning status
+6. SaveData change status
+7. PlayerProgressData.cs change status
+8. EquipmentSaveData.cs change status
+9. MainPrototype change status
+10. SampleScene change status
+11. Unity auto-modified file status
+12. .utmp/ status
+13. Existing combat regression status
+14. Save and Load regression status
+15. Debug Reset regression status
+16. Whether Android testing is needed
+17. Git status result
+
+Codex must not run git add, commit, push, merge, or branch deletion.
+
+---
+
+## 30. Current Next Task Summary
+
+The next task is 031A: Build the 8-slot hero equipment UI skeleton.
+
+031A must build UI skeleton only.
+
+031A must not implement data structure changes or actual growth logic.
+
+031A success conditions:
+
+1. The equipment UI shows eight slots.
+2. Four offensive equipment slots are on the left.
+3. Four defensive equipment slots are on the right.
+4. A hero placeholder is in the center.
+5. Selecting an equipment slot displays a summary card placeholder.
+6. No magic scroll slot appears in the equipment screen.
+7. SaveData is not changed.
+8. Existing combat, Save and Load, and Debug Reset are not broken.
+9. SampleScene is not modified.
+10. No unintended Unity setting file changes remain.
+
+---
+
+## 31. Final Summary
+
+Anima Spire is now a magic research and magic-scroll customization automatic combat RPG.
+
+The spirit concept is removed from this game.
+
+Combat direction is hero versus enemies.
+
+Magic scrolls provide skills and combat loadout depth.
+
+Equipment provides pure stat growth.
+
+The current next MVP is 031 Hero Equipment and Growth System Minimum MVP.
+
+The first step is 031A: Build the 8-slot hero equipment UI skeleton.
+
+Codex must strictly follow this document, stay within the assigned scope, and must not perform unrequested planning changes, SaveData changes, spirit reintroduction, magic-scroll equipment integration, or Git write operations.
