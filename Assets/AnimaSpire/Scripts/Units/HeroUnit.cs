@@ -47,9 +47,14 @@ public class HeroUnit : MonoBehaviour
             return;
         }
 
-        float finalDamage = magicAttack + GetEquipmentBonusAttackPower();
+        float finalDamage = CalculateAttackDamage();
         target.TakeDamage(finalDamage);
         Debug.Log($"Hero dealt {finalDamage} damage. Enemy HP: {target.currentHp}/{target.maxHp}");
+    }
+
+    public float CalculateAttackDamage()
+    {
+        return magicAttack + GetEquipmentBonusAttackPower();
     }
 
     private int GetEquipmentBonusAttackPower()
