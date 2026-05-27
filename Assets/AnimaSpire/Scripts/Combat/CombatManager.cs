@@ -62,20 +62,8 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        if (isResolvingCombat)
+        if (TryResolveCombatEnd())
         {
-            return;
-        }
-
-        if (!enemy.IsAlive)
-        {
-            StartCoroutine(RewardGoldAndResetCombat());
-            return;
-        }
-
-        if (!hero.IsAlive)
-        {
-            StartCoroutine(RetreatStageAndResetCombat());
             return;
         }
 
@@ -110,35 +98,21 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    private IEnumerator RewardGoldAndResetCombat()
+    private IEnumerator ResolveCombatEndAndReset(bool enemyDead, bool heroDead)
     {
-        isResolvingCombat = true;
-        ReturnAllActiveHeroProjectiles();
-        gameManager.AddGold(CalculateCurrentStageGoldReward());
-        stageManager?.AdvanceStage();
+        if (enemyDead)
+        {
+            GrantCurrentEnemyGoldReward();
+        }
 
-        yield return new WaitForSeconds(1f);
-
-        BeginNewCombatRound();
-        ResetRuntimePositionsForCombat();
-        hero.ResetHp();
-        ApplyCurrentStageEnemyStats();
-        ResetAttackTimers();
-        isResolvingCombat = false;
-    }
-
-    private IEnumerator RetreatStageAndResetCombat()
-    {
-        isResolvingCombat = true;
-
-        string failedStageLabel = stageManager != null ? stageManager.GetCurrentStageLabel() : "Unknown";
-        Debug.Log($"Stage failed: {failedStageLabel}");
-
-        stageManager?.RetreatStageOnFailure();
-        ReturnAllActiveHeroProjectiles();
-
-        string retreatStageLabel = stageManager != null ? stageManager.GetCurrentStageLabel() : "Unknown";
-        Debug.Log($"Retreat to Stage: {retreatStageLabel}");
+        if (heroDead)
+        {
+            RetreatStageAfterDefeat();
+        }
+        else if (enemyDead)
+        {
+            AdvanceStageAfterClear();
+        }
 
         yield return new WaitForSeconds(1f);
 
@@ -281,6 +255,58 @@ public class CombatManager : MonoBehaviour
         ReturnAllActiveHeroProjectiles();
     }
 
+    private bool TryResolveCombatEnd()
+    {
+        if (isResolvingCombat)
+        {
+            return true;
+        }
+
+        bool enemyDead = enemy != null && !enemy.IsAlive;
+        bool heroDead = hero != null && !hero.IsAlive;
+        if (enemyDead || heroDead)
+        {
+            BeginCombatResolution();
+            StartCoroutine(ResolveCombatEndAndReset(enemyDead, heroDead));
+            return true;
+        }
+
+        return false;
+    }
+
+    private void BeginCombatResolution()
+    {
+        if (isResolvingCombat)
+        {
+            return;
+        }
+
+        isResolvingCombat = true;
+        currentStageToken++;
+        ReturnAllActiveHeroProjectiles();
+    }
+
+    private void GrantCurrentEnemyGoldReward()
+    {
+        gameManager.AddGold(CalculateCurrentStageGoldReward());
+    }
+
+    private void AdvanceStageAfterClear()
+    {
+        stageManager?.AdvanceStage();
+    }
+
+    private void RetreatStageAfterDefeat()
+    {
+        string failedStageLabel = stageManager != null ? stageManager.GetCurrentStageLabel() : "Unknown";
+        Debug.Log($"Stage failed: {failedStageLabel}");
+
+        stageManager?.RetreatStageOnFailure();
+
+        string retreatStageLabel = stageManager != null ? stageManager.GetCurrentStageLabel() : "Unknown";
+        Debug.Log($"Retreat to Stage: {retreatStageLabel}");
+    }
+
     private void ApplyCurrentStageEnemyStats()
     {
         if (stageManager == null || stageDifficultyCalculator == null || enemy == null)
@@ -373,7 +399,7 @@ public class CombatManager : MonoBehaviour
 
     private void ResolveHeroProjectileHit(HeroProjectile projectile, EnemyUnit target, float damageSnapshot, int projectileStageToken)
     {
-        if (projectileStageToken != currentStageToken || target == null || !target.IsAlive)
+        if (isResolvingCombat || projectileStageToken != currentStageToken || target == null || target != enemy || !target.IsAlive)
         {
             return;
         }
