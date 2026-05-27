@@ -528,12 +528,10 @@ public class MainTabController : MonoBehaviour
 
     private void EnsureEquipmentPanelController()
     {
-        if (!equipmentPanel.TryGetComponent(out EquipmentPanelController controller))
+        if (!equipmentPanel.TryGetComponent(out HeroEquipmentPanelUI controller))
         {
-            controller = equipmentPanel.AddComponent<EquipmentPanelController>();
+            controller = equipmentPanel.AddComponent<HeroEquipmentPanelUI>();
         }
-
-        controller.Initialize(equipmentManager);
     }
 
     private void SetBottomMenuAsLastSibling()
