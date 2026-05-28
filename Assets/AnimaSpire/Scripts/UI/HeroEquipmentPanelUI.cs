@@ -22,6 +22,19 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         "\uC2E0\uBC1C"
     };
 
+    private static readonly string[] EquipmentFilterNames =
+    {
+        "\uC804\uCCB4",
+        "\uBB34\uAE30",
+        "\uBAA9\uAC78\uC774",
+        "\uADC0\uACE0\uB9AC",
+        "\uBC18\uC9C0",
+        "\uBAA8\uC790",
+        "\uC637",
+        "\uC7A5\uAC11",
+        "\uC2E0\uBC1C"
+    };
+
     private Text selectedSlotText;
     private Text equipmentNameText;
     private Text effectText;
@@ -31,6 +44,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     private GameObject equipmentContentRoot;
     private GameObject weaponSlotUpgradePopupRoot;
     private string selectedSlotName;
+    private string selectedEquipmentFilterName = "\uC804\uCCB4";
     private bool hasReceivedRootTarget;
     private bool isPanelVisible;
 
@@ -200,6 +214,8 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     {
         GameObject areaObject = EnsureAreaPanel(root, "EquipmentFilterArea", new Color(0.08f, 0.1f, 0.15f, 0.94f), 1f);
         EnsurePlaceholderAreaText(areaObject.transform, "EquipmentFilterPlaceholderText", "\uC7A5\uBE44 \uD544\uD130 \uC601\uC5ED - 031N-2\uC5D0\uC11C \uAD6C\uD604 \uC608\uC815");
+        SetDirectChildActive(areaObject.transform, "EquipmentFilterPlaceholderText", false);
+        EnsureEquipmentFilterScrollShell(areaObject.transform);
         return areaObject.transform;
     }
 
@@ -232,6 +248,173 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     {
         Text placeholderText = EnsureText(parent, objectName, textValue, 24, TextAnchor.MiddleCenter, 0f);
         placeholderText.color = new Color(0.74f, 0.8f, 0.88f, 1f);
+    }
+
+    private void EnsureEquipmentFilterScrollShell(Transform parent)
+    {
+        GameObject scrollObject = EnsureTransparentPanel(parent, "EquipmentFilterScrollRect", true);
+        StretchToParent(scrollObject.GetComponent<RectTransform>());
+
+        ScrollRect scrollRect = scrollObject.GetComponent<ScrollRect>();
+        if (scrollRect == null)
+        {
+            scrollRect = scrollObject.AddComponent<ScrollRect>();
+        }
+
+        scrollRect.horizontal = true;
+        scrollRect.vertical = false;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.inertia = true;
+        scrollRect.horizontalScrollbar = null;
+        scrollRect.verticalScrollbar = null;
+
+        GameObject viewportObject = EnsureTransparentPanel(scrollObject.transform, "EquipmentFilterViewport", true);
+        StretchToParent(viewportObject.GetComponent<RectTransform>());
+
+        RectMask2D rectMask = viewportObject.GetComponent<RectMask2D>();
+        if (rectMask == null)
+        {
+            viewportObject.AddComponent<RectMask2D>();
+        }
+
+        GameObject contentObject = EnsureEquipmentFilterContent(viewportObject.transform);
+
+        scrollRect.viewport = viewportObject.GetComponent<RectTransform>();
+        scrollRect.content = contentObject.GetComponent<RectTransform>();
+
+        for (int i = 0; i < EquipmentFilterNames.Length; i++)
+        {
+            EnsureEquipmentFilterButton(contentObject.transform, EquipmentFilterNames[i]);
+        }
+
+        RefreshEquipmentFilterButtonVisuals();
+    }
+
+    private GameObject EnsureEquipmentFilterContent(Transform parent)
+    {
+        const string objectName = "EquipmentFilterContent";
+        Transform existing = GetDirectChild(parent, objectName);
+        GameObject contentObject = existing != null ? existing.gameObject : new GameObject(objectName, typeof(RectTransform));
+        contentObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = contentObject.GetComponent<RectTransform>();
+        rectTransform.localScale = Vector3.one;
+        rectTransform.anchorMin = new Vector2(0f, 0f);
+        rectTransform.anchorMax = new Vector2(0f, 1f);
+        rectTransform.pivot = new Vector2(0f, 0.5f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = Vector2.zero;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        HorizontalLayoutGroup layoutGroup = contentObject.GetComponent<HorizontalLayoutGroup>();
+        if (layoutGroup == null)
+        {
+            layoutGroup = contentObject.AddComponent<HorizontalLayoutGroup>();
+        }
+
+        layoutGroup.padding = new RectOffset(8, 8, 4, 4);
+        layoutGroup.spacing = 8f;
+        layoutGroup.childAlignment = TextAnchor.MiddleLeft;
+        layoutGroup.childControlWidth = true;
+        layoutGroup.childControlHeight = true;
+        layoutGroup.childForceExpandWidth = false;
+        layoutGroup.childForceExpandHeight = true;
+
+        ContentSizeFitter contentSizeFitter = contentObject.GetComponent<ContentSizeFitter>();
+        if (contentSizeFitter == null)
+        {
+            contentSizeFitter = contentObject.AddComponent<ContentSizeFitter>();
+        }
+
+        contentSizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+        contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        return contentObject;
+    }
+
+    private void EnsureEquipmentFilterButton(Transform parent, string filterName)
+    {
+        GameObject buttonObject = EnsurePanel(parent, "EquipmentFilterButton_" + filterName, new Color(0.16f, 0.2f, 0.28f, 0.98f));
+        LayoutElement layoutElement = EnsureLayoutElement(buttonObject);
+        layoutElement.minWidth = 120f;
+        layoutElement.preferredWidth = 120f;
+        layoutElement.minHeight = 34f;
+        layoutElement.preferredHeight = 42f;
+        layoutElement.flexibleWidth = 0f;
+        layoutElement.flexibleHeight = 0f;
+
+        Button button = buttonObject.GetComponent<Button>();
+        if (button == null)
+        {
+            button = buttonObject.AddComponent<Button>();
+        }
+
+        button.targetGraphic = buttonObject.GetComponent<Image>();
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() => SelectEquipmentFilter(filterName));
+
+        Text labelText = EnsureText(buttonObject.transform, "Text", filterName, 20, TextAnchor.MiddleCenter, 0f);
+        labelText.resizeTextMinSize = 14;
+        labelText.resizeTextMaxSize = 20;
+    }
+
+    private void SelectEquipmentFilter(string filterName)
+    {
+        selectedEquipmentFilterName = filterName;
+        Debug.Log("Equipment filter selected: " + filterName);
+        RefreshEquipmentFilterButtonVisuals();
+    }
+
+    private void RefreshEquipmentFilterButtonVisuals()
+    {
+        GameObject rootObject = equipmentContentRoot != null ? equipmentContentRoot : GetExistingRootObject();
+        if (rootObject == null)
+        {
+            return;
+        }
+
+        Transform filterArea = GetDirectChild(rootObject.transform, "EquipmentFilterArea");
+        if (filterArea == null)
+        {
+            return;
+        }
+
+        Transform scrollRect = GetDirectChild(filterArea, "EquipmentFilterScrollRect");
+        Transform viewport = scrollRect != null ? GetDirectChild(scrollRect, "EquipmentFilterViewport") : null;
+        Transform content = viewport != null ? GetDirectChild(viewport, "EquipmentFilterContent") : null;
+        if (content == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < EquipmentFilterNames.Length; i++)
+        {
+            string filterName = EquipmentFilterNames[i];
+            Transform buttonTransform = GetDirectChild(content, "EquipmentFilterButton_" + filterName);
+            if (buttonTransform == null)
+            {
+                continue;
+            }
+
+            bool isSelected = filterName == selectedEquipmentFilterName;
+            Image background = buttonTransform.GetComponent<Image>();
+            if (background != null)
+            {
+                background.color = isSelected
+                    ? new Color(0.27f, 0.48f, 0.82f, 0.98f)
+                    : new Color(0.16f, 0.2f, 0.28f, 0.98f);
+            }
+
+            Transform textTransform = GetDirectChild(buttonTransform, "Text");
+            Text text = textTransform != null ? textTransform.GetComponent<Text>() : null;
+            if (text != null)
+            {
+                text.color = isSelected
+                    ? Color.white
+                    : new Color(0.82f, 0.88f, 0.96f, 1f);
+            }
+        }
     }
 
     private GameObject GetExistingRootObject()
@@ -523,6 +706,24 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         Image image = panelObject.GetComponent<Image>();
         image.color = color;
         image.raycastTarget = true;
+
+        return panelObject;
+    }
+
+    private GameObject EnsureTransparentPanel(Transform parent, string objectName, bool raycastTarget)
+    {
+        Transform existing = GetDirectChild(parent, objectName);
+        GameObject panelObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        panelObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = panelObject.GetComponent<RectTransform>();
+        StretchToParent(rectTransform);
+
+        Image image = panelObject.GetComponent<Image>();
+        image.color = new Color(1f, 1f, 1f, 0f);
+        image.raycastTarget = raycastTarget;
 
         return panelObject;
     }
