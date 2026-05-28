@@ -538,6 +538,7 @@ public class MainTabController : MonoBehaviour
         }
 
         controller.SetEquipmentRootTarget(equipmentRootTarget);
+        controller.SetEquipmentManager(equipmentManager);
         equipmentPanelController = controller;
         equipmentPanelController.HidePanel();
     }

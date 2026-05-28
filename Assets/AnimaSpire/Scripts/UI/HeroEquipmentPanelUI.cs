@@ -4,6 +4,7 @@ using UnityEngine.UI;
 public sealed class HeroEquipmentPanelUI : MonoBehaviour
 {
     private Transform equipmentRootTarget;
+    private EquipmentManager equipmentManager;
 
     private static readonly string[] OffensiveSlotNames =
     {
@@ -24,6 +25,9 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     private Text selectedSlotText;
     private Text equipmentNameText;
     private Text effectText;
+    private Text weaponSlotUpgradeLevelText;
+    private Text weaponSlotUpgradeCostText;
+    private Text weaponSlotUpgradeMessageText;
     private GameObject equipmentContentRoot;
     private GameObject weaponSlotUpgradePopupRoot;
     private string selectedSlotName;
@@ -60,6 +64,16 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         }
 
         HideWeaponSlotUpgradePopup();
+    }
+
+    public void SetEquipmentManager(EquipmentManager manager)
+    {
+        equipmentManager = manager;
+
+        if (weaponSlotUpgradePopupRoot != null)
+        {
+            RefreshWeaponSlotUpgradePopup();
+        }
     }
 
     public void ShowPanel()
@@ -485,6 +499,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
         const string objectName = "WeaponSlotUpgradePopup";
         Transform existing = GetDirectChild(equipmentRootTarget, objectName);
+        bool wasActive = existing != null && existing.gameObject.activeSelf;
         weaponSlotUpgradePopupRoot = existing != null
             ? existing.gameObject
             : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -530,20 +545,29 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         Text titleText = EnsureText(cardObject.transform, "WeaponSlotUpgradeTitleText", "\uBB34\uAE30 \uC2AC\uB86F \uAC15\uD654", 34, TextAnchor.MiddleCenter, 62f);
         titleText.color = new Color(0.94f, 0.97f, 1f, 1f);
 
-        Text levelText = EnsureText(cardObject.transform, "WeaponSlotUpgradeLevelText", "\uD604\uC7AC \uB808\uBCA8: Lv. 0", 28, TextAnchor.MiddleCenter, 50f);
-        levelText.color = new Color(0.84f, 0.9f, 1f, 1f);
+        weaponSlotUpgradeLevelText = EnsureText(cardObject.transform, "WeaponSlotUpgradeLevelText", "\uD604\uC7AC \uB808\uBCA8: Lv. 0", 28, TextAnchor.MiddleCenter, 50f);
+        weaponSlotUpgradeLevelText.color = new Color(0.84f, 0.9f, 1f, 1f);
 
-        Text costText = EnsureText(cardObject.transform, "WeaponSlotUpgradeCostText", "\uAC15\uD654 \uBE44\uC6A9: 10 Gold", 28, TextAnchor.MiddleCenter, 50f);
-        costText.color = new Color(1f, 0.91f, 0.62f, 1f);
+        weaponSlotUpgradeCostText = EnsureText(cardObject.transform, "WeaponSlotUpgradeCostText", "\uAC15\uD654 \uBE44\uC6A9: 10 Gold", 28, TextAnchor.MiddleCenter, 50f);
+        weaponSlotUpgradeCostText.color = new Color(1f, 0.91f, 0.62f, 1f);
 
         Text descriptionText = EnsureText(cardObject.transform, "WeaponSlotUpgradeDescriptionText", "\uC2E4\uC81C \uAC15\uD654 \uB85C\uC9C1\uC740 031M\uC5D0\uC11C \uC5F0\uACB0 \uC608\uC815", 24, TextAnchor.MiddleCenter, 72f);
         descriptionText.color = new Color(0.75f, 0.8f, 0.88f, 1f);
+
+        weaponSlotUpgradeMessageText = EnsureText(cardObject.transform, "WeaponSlotUpgradeMessageText", string.Empty, 24, TextAnchor.MiddleCenter, 48f);
+        weaponSlotUpgradeMessageText.color = new Color(0.8f, 0.88f, 1f, 1f);
 
         Transform buttonRow = EnsureHorizontalRow(cardObject.transform, "WeaponSlotUpgradeButtonRow", 86f);
         EnsureWeaponSlotUpgradeButton(buttonRow);
         EnsureWeaponSlotUpgradeCloseButton(buttonRow);
 
-        weaponSlotUpgradePopupRoot.SetActive(false);
+        if (weaponSlotUpgradeLevelText == null || weaponSlotUpgradeCostText == null || weaponSlotUpgradeMessageText == null)
+        {
+            Debug.LogError("HeroEquipmentPanelUI failed to cache WeaponSlotUpgradePopup text components.");
+            return false;
+        }
+
+        weaponSlotUpgradePopupRoot.SetActive(wasActive);
         return true;
     }
 
@@ -563,7 +587,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
         button.targetGraphic = buttonObject.GetComponent<Image>();
         button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(() => Debug.Log("Weapon Slot upgrade placeholder clicked."));
+        button.onClick.AddListener(HandleWeaponSlotUpgradeButtonClicked);
 
         EnsureText(buttonObject.transform, "Text", "\uAC15\uD654", 28, TextAnchor.MiddleCenter, 0f);
     }
@@ -596,6 +620,8 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
             return;
         }
 
+        ClearWeaponSlotUpgradeMessage();
+        RefreshWeaponSlotUpgradePopup();
         weaponSlotUpgradePopupRoot.SetActive(true);
         weaponSlotUpgradePopupRoot.transform.SetAsLastSibling();
     }
@@ -611,11 +637,72 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         {
             weaponSlotUpgradePopupRoot.SetActive(false);
         }
+
+        ClearWeaponSlotUpgradeMessage();
     }
 
     private bool IsWeaponSlot(string slotName)
     {
         return slotName == OffensiveSlotNames[0];
+    }
+
+    private void RefreshWeaponSlotUpgradePopup()
+    {
+        if (weaponSlotUpgradeLevelText == null || weaponSlotUpgradeCostText == null || weaponSlotUpgradeMessageText == null)
+        {
+            if (!EnsureWeaponSlotUpgradePopup())
+            {
+                return;
+            }
+        }
+
+        if (equipmentManager == null)
+        {
+            weaponSlotUpgradeLevelText.text = "\uD604\uC7AC \uB808\uBCA8: -";
+            weaponSlotUpgradeCostText.text = "\uAC15\uD654 \uBE44\uC6A9: -";
+            weaponSlotUpgradeMessageText.text = "\uC7A5\uBE44 \uC2DC\uC2A4\uD15C \uC900\uBE44 \uC911";
+            weaponSlotUpgradeMessageText.color = new Color(1f, 0.78f, 0.45f, 1f);
+            return;
+        }
+
+        int level = equipmentManager.WeaponSlotLevel;
+        int cost = equipmentManager.GetWeaponSlotUpgradeCost(level);
+        weaponSlotUpgradeLevelText.text = "\uD604\uC7AC \uB808\uBCA8: Lv. " + level;
+        weaponSlotUpgradeCostText.text = "\uAC15\uD654 \uBE44\uC6A9: " + cost + " Gold";
+    }
+
+    private void HandleWeaponSlotUpgradeButtonClicked()
+    {
+        if (!EnsureWeaponSlotUpgradePopup())
+        {
+            return;
+        }
+
+        if (equipmentManager == null)
+        {
+            weaponSlotUpgradeMessageText.text = "\uC7A5\uBE44 \uC2DC\uC2A4\uD15C \uC900\uBE44 \uC911";
+            weaponSlotUpgradeMessageText.color = new Color(1f, 0.78f, 0.45f, 1f);
+            RefreshWeaponSlotUpgradePopup();
+            return;
+        }
+
+        bool succeeded = equipmentManager.TryUpgradeWeaponSlot(out string message);
+        weaponSlotUpgradeMessageText.text = message;
+        weaponSlotUpgradeMessageText.color = succeeded
+            ? new Color(0.48f, 0.9f, 0.6f, 1f)
+            : new Color(1f, 0.68f, 0.6f, 1f);
+        RefreshWeaponSlotUpgradePopup();
+    }
+
+    private void ClearWeaponSlotUpgradeMessage()
+    {
+        if (weaponSlotUpgradeMessageText == null)
+        {
+            return;
+        }
+
+        weaponSlotUpgradeMessageText.text = string.Empty;
+        weaponSlotUpgradeMessageText.color = new Color(0.8f, 0.88f, 1f, 1f);
     }
 
     private Transform GetDirectChild(Transform parent, string childName)
