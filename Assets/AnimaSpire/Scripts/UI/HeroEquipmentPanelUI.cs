@@ -35,6 +35,34 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         "\uC2E0\uBC1C"
     };
 
+    private static readonly string[] OwnedEquipmentPlaceholderNames =
+    {
+        "\uBB34\uAE30 A",
+        "\uBAA9\uAC78\uC774 A",
+        "\uADC0\uACE0\uB9AC A",
+        "\uBC18\uC9C0 A",
+        "\uBAA8\uC790 A",
+        "\uC637 A",
+        "\uC7A5\uAC11 A",
+        "\uC2E0\uBC1C A",
+        "\uBB34\uAE30 B",
+        "\uBAA9\uAC78\uC774 B",
+        "\uADC0\uACE0\uB9AC B",
+        "\uBC18\uC9C0 B",
+        "\uBAA8\uC790 B",
+        "\uC637 B",
+        "\uC7A5\uAC11 B",
+        "\uC2E0\uBC1C B",
+        "\uBB34\uAE30 C",
+        "\uBAA9\uAC78\uC774 C",
+        "\uADC0\uACE0\uB9AC C",
+        "\uBC18\uC9C0 C",
+        "\uBAA8\uC790 C",
+        "\uC637 C",
+        "\uC7A5\uAC11 C",
+        "\uC2E0\uBC1C C"
+    };
+
     private Text selectedSlotText;
     private Text equipmentNameText;
     private Text effectText;
@@ -223,6 +251,8 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     {
         GameObject areaObject = EnsureAreaPanel(root, "OwnedEquipmentArea", new Color(0.07f, 0.09f, 0.13f, 0.94f), 10f);
         EnsurePlaceholderAreaText(areaObject.transform, "OwnedEquipmentPlaceholderText", "\uBCF4\uC720 \uC7A5\uBE44 \uC601\uC5ED - 031N-3\uC5D0\uC11C \uAD6C\uD604 \uC608\uC815");
+        SetDirectChildActive(areaObject.transform, "OwnedEquipmentPlaceholderText", false);
+        EnsureOwnedEquipmentScrollShell(areaObject.transform);
         return areaObject.transform;
     }
 
@@ -415,6 +445,132 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
                     : new Color(0.82f, 0.88f, 0.96f, 1f);
             }
         }
+    }
+
+    private void EnsureOwnedEquipmentScrollShell(Transform parent)
+    {
+        GameObject scrollObject = EnsureTransparentPanel(parent, "OwnedEquipmentScrollRect", true);
+        StretchToParent(scrollObject.GetComponent<RectTransform>());
+
+        ScrollRect scrollRect = scrollObject.GetComponent<ScrollRect>();
+        if (scrollRect == null)
+        {
+            scrollRect = scrollObject.AddComponent<ScrollRect>();
+        }
+
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.inertia = true;
+        scrollRect.horizontalScrollbar = null;
+        scrollRect.verticalScrollbar = null;
+
+        GameObject viewportObject = EnsureTransparentPanel(scrollObject.transform, "OwnedEquipmentViewport", true);
+        StretchToParent(viewportObject.GetComponent<RectTransform>());
+
+        RectMask2D rectMask = viewportObject.GetComponent<RectMask2D>();
+        if (rectMask == null)
+        {
+            viewportObject.AddComponent<RectMask2D>();
+        }
+
+        GameObject contentObject = EnsureOwnedEquipmentContent(viewportObject.transform);
+
+        scrollRect.viewport = viewportObject.GetComponent<RectTransform>();
+        scrollRect.content = contentObject.GetComponent<RectTransform>();
+
+        for (int i = 0; i < OwnedEquipmentPlaceholderNames.Length; i++)
+        {
+            EnsureOwnedEquipmentCard(contentObject.transform, i + 1, OwnedEquipmentPlaceholderNames[i]);
+        }
+    }
+
+    private GameObject EnsureOwnedEquipmentContent(Transform parent)
+    {
+        const string objectName = "OwnedEquipmentContent";
+        Transform existing = GetDirectChild(parent, objectName);
+        GameObject contentObject = existing != null ? existing.gameObject : new GameObject(objectName, typeof(RectTransform));
+        contentObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = contentObject.GetComponent<RectTransform>();
+        rectTransform.localScale = Vector3.one;
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0.5f, 1f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = Vector2.zero;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        GridLayoutGroup gridLayoutGroup = contentObject.GetComponent<GridLayoutGroup>();
+        if (gridLayoutGroup == null)
+        {
+            gridLayoutGroup = contentObject.AddComponent<GridLayoutGroup>();
+        }
+
+        gridLayoutGroup.padding = new RectOffset(10, 10, 10, 10);
+        gridLayoutGroup.spacing = new Vector2(10f, 10f);
+        gridLayoutGroup.startCorner = GridLayoutGroup.Corner.UpperLeft;
+        gridLayoutGroup.startAxis = GridLayoutGroup.Axis.Horizontal;
+        gridLayoutGroup.childAlignment = TextAnchor.UpperLeft;
+        gridLayoutGroup.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        gridLayoutGroup.constraintCount = 4;
+        gridLayoutGroup.cellSize = new Vector2(150f, 170f);
+
+        ContentSizeFitter contentSizeFitter = contentObject.GetComponent<ContentSizeFitter>();
+        if (contentSizeFitter == null)
+        {
+            contentSizeFitter = contentObject.AddComponent<ContentSizeFitter>();
+        }
+
+        contentSizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        return contentObject;
+    }
+
+    private void EnsureOwnedEquipmentCard(Transform parent, int index, string cardName)
+    {
+        GameObject cardObject = EnsurePanel(parent, "OwnedEquipmentCard_" + index.ToString("000"), new Color(0.13f, 0.16f, 0.22f, 0.98f));
+
+        Button button = cardObject.GetComponent<Button>();
+        if (button == null)
+        {
+            button = cardObject.AddComponent<Button>();
+        }
+
+        button.targetGraphic = cardObject.GetComponent<Image>();
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() => Debug.Log("Owned equipment card clicked: " + cardName));
+
+        VerticalLayoutGroup layoutGroup = cardObject.GetComponent<VerticalLayoutGroup>();
+        if (layoutGroup == null)
+        {
+            layoutGroup = cardObject.AddComponent<VerticalLayoutGroup>();
+        }
+
+        layoutGroup.padding = new RectOffset(8, 8, 8, 8);
+        layoutGroup.spacing = 6f;
+        layoutGroup.childAlignment = TextAnchor.UpperCenter;
+        layoutGroup.childControlWidth = true;
+        layoutGroup.childControlHeight = true;
+        layoutGroup.childForceExpandWidth = true;
+        layoutGroup.childForceExpandHeight = false;
+
+        GameObject iconObject = EnsurePanel(cardObject.transform, "IconPlaceholder", new Color(0.24f, 0.32f, 0.46f, 1f));
+        LayoutElement iconLayout = EnsureLayoutElement(iconObject);
+        iconLayout.minHeight = 58f;
+        iconLayout.preferredHeight = 66f;
+        iconLayout.flexibleWidth = 1f;
+
+        Text iconText = EnsureText(iconObject.transform, "IconText", "?", 24, TextAnchor.MiddleCenter, 0f);
+        iconText.color = new Color(0.9f, 0.94f, 1f, 1f);
+
+        Text nameText = EnsureText(cardObject.transform, "NameText", cardName, 20, TextAnchor.MiddleCenter, 34f);
+        nameText.color = Color.white;
+
+        Text infoText = EnsureText(cardObject.transform, "InfoText", "Placeholder x1", 16, TextAnchor.MiddleCenter, 28f);
+        infoText.color = new Color(0.76f, 0.82f, 0.9f, 1f);
     }
 
     private GameObject GetExistingRootObject()
