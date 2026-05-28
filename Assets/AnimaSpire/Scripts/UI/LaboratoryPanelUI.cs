@@ -1,9 +1,21 @@
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 public sealed class LaboratoryPanelUI : MonoBehaviour
 {
     private bool hasBuiltUi;
+    private Button wardrobeButton;
+    private Button synthesisRoomButton;
+    private UnityAction onWardrobeClicked;
+    private UnityAction onSynthesisRoomClicked;
+
+    public void SetCallbacks(UnityAction wardrobeClicked, UnityAction synthesisRoomClicked)
+    {
+        onWardrobeClicked = wardrobeClicked;
+        onSynthesisRoomClicked = synthesisRoomClicked;
+        RefreshButtonCallbacks();
+    }
 
     public void ShowPanel()
     {
@@ -66,18 +78,19 @@ public sealed class LaboratoryPanelUI : MonoBehaviour
             "LaboratoryCard_Wardrobe",
             "\uC637\uC7A5",
             "\uC7A5\uBE44\uB97C \uD655\uC778\uD569\uB2C8\uB2E4.",
-            () => Debug.Log("Laboratory wardrobe clicked."));
+            out wardrobeButton);
         EnsureLaboratoryCard(
             cardRowObject.transform,
             "LaboratoryCard_SynthesisRoom",
             "\uC5F0\uC131\uC2E4",
             "\uC7A5\uBE44\uB97C \uC5F0\uC131\uD569\uB2C8\uB2E4.",
-            () => Debug.Log("Laboratory synthesis room clicked."));
+            out synthesisRoomButton);
 
         hasBuiltUi = true;
+        RefreshButtonCallbacks();
     }
 
-    private void EnsureLaboratoryCard(Transform parent, string objectName, string title, string description, UnityEngine.Events.UnityAction onClick)
+    private void EnsureLaboratoryCard(Transform parent, string objectName, string title, string description, out Button button)
     {
         GameObject cardObject = EnsurePanel(parent, objectName, new Color(0.13f, 0.16f, 0.22f, 0.98f));
         LayoutElement cardLayout = cardObject.AddComponent<LayoutElement>();
@@ -85,15 +98,13 @@ public sealed class LaboratoryPanelUI : MonoBehaviour
         cardLayout.preferredHeight = 150f;
         cardLayout.flexibleWidth = 1f;
 
-        Button button = cardObject.GetComponent<Button>();
+        button = cardObject.GetComponent<Button>();
         if (button == null)
         {
             button = cardObject.AddComponent<Button>();
         }
 
         button.targetGraphic = cardObject.GetComponent<Image>();
-        button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(onClick);
 
         VerticalLayoutGroup layoutGroup = cardObject.AddComponent<VerticalLayoutGroup>();
         layoutGroup.padding = new RectOffset(14, 14, 18, 18);
@@ -112,6 +123,31 @@ public sealed class LaboratoryPanelUI : MonoBehaviour
         LayoutElement descriptionLayout = descriptionText.gameObject.AddComponent<LayoutElement>();
         descriptionLayout.preferredHeight = 54f;
         descriptionText.color = new Color(0.78f, 0.84f, 0.92f, 1f);
+    }
+
+    private void RefreshButtonCallbacks()
+    {
+        if (wardrobeButton != null)
+        {
+            wardrobeButton.onClick.RemoveAllListeners();
+            wardrobeButton.onClick.AddListener(onWardrobeClicked ?? LogWardrobeClicked);
+        }
+
+        if (synthesisRoomButton != null)
+        {
+            synthesisRoomButton.onClick.RemoveAllListeners();
+            synthesisRoomButton.onClick.AddListener(onSynthesisRoomClicked ?? LogSynthesisRoomClicked);
+        }
+    }
+
+    private void LogWardrobeClicked()
+    {
+        Debug.Log("Laboratory wardrobe clicked.");
+    }
+
+    private void LogSynthesisRoomClicked()
+    {
+        Debug.Log("Laboratory synthesis room clicked.");
     }
 
     private GameObject EnsurePanel(Transform parent, string objectName, Color color)
