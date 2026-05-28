@@ -20,11 +20,13 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private GameObject bottomMenuPanel;
     [SerializeField] private GameObject tabContentPanel;
     [SerializeField] private GameObject equipmentPanel;
+    [SerializeField] private Transform equipmentRootTarget;
     [SerializeField] private EquipmentManager equipmentManager;
     [SerializeField] private ProgressSaveManager progressSaveManager;
 
     private RectTransform combatHudRectTransform;
     private RectTransform equipmentPanelRectTransform;
+    private HeroEquipmentPanelUI equipmentPanelController;
 
     private void Awake()
     {
@@ -52,6 +54,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(infoPanel, true);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
+        equipmentPanelController?.HidePanel();
     }
 
     public void ShowEquipment()
@@ -60,6 +63,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(infoPanel, true);
         SetActiveIfPresent(tabContentPanel, true);
         SetActiveIfPresent(equipmentPanel, true);
+        equipmentPanelController?.ShowPanel();
         SetBottomMenuAsLastSibling();
     }
 
@@ -532,6 +536,10 @@ public class MainTabController : MonoBehaviour
         {
             controller = equipmentPanel.AddComponent<HeroEquipmentPanelUI>();
         }
+
+        controller.SetEquipmentRootTarget(equipmentRootTarget);
+        equipmentPanelController = controller;
+        equipmentPanelController.HidePanel();
     }
 
     private void SetBottomMenuAsLastSibling()
