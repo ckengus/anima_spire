@@ -1,5 +1,29 @@
 public enum EquipmentId
 {
     AMagicBook,
-    BMagicBook
+    BMagicBook,
+    CMagicBook,
+    DMagicBook,
+    EMagicBook,
+    ANecklace,
+    BNecklace,
+    CNecklace,
+    AEarring,
+    BEarring,
+    CEarring,
+    ARing,
+    BRing,
+    CRing,
+    AHat,
+    BHat,
+    CHat,
+    AClothes,
+    BClothes,
+    CClothes,
+    AGloves,
+    BGloves,
+    CGloves,
+    AShoes,
+    BShoes,
+    CShoes
 }
