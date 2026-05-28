@@ -1119,6 +1119,7 @@ GameObject:
   m_Component:
   - component: {fileID: 100000301}
   - component: {fileID: 100000302}
+  - component: {fileID: 100000303}
   m_Layer: 0
   m_Name: GameBootstrapper
   m_TagString: Untagged
@@ -1158,6 +1159,18 @@ MonoBehaviour:
   stageManager: {fileID: 100000012}
   combatManager: {fileID: 100000022}
   equipmentManager: {fileID: 0}
+--- !u!114 &100000303
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f69c5bd1d24c470a9215997a1bdca690, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
 --- !u!1 &100000310
 GameObject:
   m_ObjectHideFlags: 0
