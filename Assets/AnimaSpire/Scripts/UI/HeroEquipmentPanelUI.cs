@@ -44,6 +44,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     private Text weaponSlotUpgradeMessageText;
     private GameObject equipmentContentRoot;
     private GameObject weaponSlotUpgradePopupRoot;
+    private EquipmentDetailPopupUI equipmentDetailPopup;
     private string selectedSlotName;
     private string selectedEquipmentFilterName = "\uC804\uCCB4";
     private bool hasReceivedRootTarget;
@@ -72,6 +73,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         equipmentRootTarget = target;
         equipmentContentRoot = GetExistingRootObject();
         weaponSlotUpgradePopupRoot = GetExistingWeaponSlotUpgradePopupObject();
+        equipmentDetailPopup = GetExistingEquipmentDetailPopup();
 
         if (equipmentContentRoot != null)
         {
@@ -79,6 +81,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         }
 
         HideWeaponSlotUpgradePopup();
+        HideEquipmentDetailPopup();
     }
 
     public void SetEquipmentManager(EquipmentManager manager)
@@ -116,6 +119,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
             }
 
             HideWeaponSlotUpgradePopup();
+            HideEquipmentDetailPopup();
             return;
         }
 
@@ -145,6 +149,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         EnsureTitle(equippedEquipmentArea);
         EnsureEquipmentLayout(equippedEquipmentArea);
         HideLegacyEquippedDebugUi(equippedEquipmentArea);
+        EnsureEquipmentDetailPopup();
 
         return true;
     }
@@ -642,7 +647,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
         button.targetGraphic = cardObject.GetComponent<Image>();
         button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(() => Debug.Log("Equipment codex card clicked: " + definition.id + ", owned=" + isOwned));
+        button.onClick.AddListener(() => ShowEquipmentDetailPopup(definition, tierCounts, isOwned));
 
         VerticalLayoutGroup layoutGroup = cardObject.GetComponent<VerticalLayoutGroup>();
         if (layoutGroup == null)
@@ -684,6 +689,42 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         infoText.color = isOwned
             ? new Color(0.76f, 0.82f, 0.9f, 1f)
             : new Color(0.38f, 0.42f, 0.48f, 1f);
+    }
+
+    private void ShowEquipmentDetailPopup(EquipmentDefinition definition, Dictionary<EquipmentTier, int> tierCounts, bool isOwned)
+    {
+        if (!EnsureEquipmentDetailPopup())
+        {
+            return;
+        }
+
+        Dictionary<EquipmentTier, int> tierCountsCopy = tierCounts != null
+            ? new Dictionary<EquipmentTier, int>(tierCounts)
+            : null;
+
+        equipmentDetailPopup.ShowPopup(
+            definition,
+            tierCountsCopy,
+            isOwned,
+            false,
+            false,
+            false,
+            () => Debug.Log("Equipment equip placeholder clicked. 031S-2 will implement equip."),
+            () => Debug.Log("Equipment unequip placeholder clicked. 031S-2 will implement unequip."),
+            null);
+    }
+
+    private void HideEquipmentDetailPopup()
+    {
+        if (equipmentDetailPopup == null)
+        {
+            equipmentDetailPopup = GetExistingEquipmentDetailPopup();
+        }
+
+        if (equipmentDetailPopup != null)
+        {
+            equipmentDetailPopup.HidePopup();
+        }
     }
 
     private string BuildTierCountSummary(Dictionary<EquipmentTier, int> tierCounts)
@@ -736,6 +777,44 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         const string objectName = "WeaponSlotUpgradePopup";
         Transform existing = GetDirectChild(equipmentRootTarget, objectName);
         return existing != null ? existing.gameObject : null;
+    }
+
+    private EquipmentDetailPopupUI GetExistingEquipmentDetailPopup()
+    {
+        if (equipmentRootTarget == null)
+        {
+            return null;
+        }
+
+        const string objectName = "EquipmentDetailPopup";
+        Transform existing = GetDirectChild(equipmentRootTarget, objectName);
+        return existing != null ? existing.GetComponent<EquipmentDetailPopupUI>() : null;
+    }
+
+    private bool EnsureEquipmentDetailPopup()
+    {
+        if (equipmentRootTarget == null)
+        {
+            Debug.LogError("HeroEquipmentPanelUI equipmentRootTarget is missing. EquipmentDetailPopup cannot be created.");
+            return false;
+        }
+
+        if (equipmentDetailPopup == null)
+        {
+            equipmentDetailPopup = GetExistingEquipmentDetailPopup();
+        }
+
+        if (equipmentDetailPopup == null)
+        {
+            const string objectName = "EquipmentDetailPopup";
+            GameObject popupObject = new GameObject(objectName, typeof(RectTransform));
+            popupObject.transform.SetParent(equipmentRootTarget, false);
+            StretchToParent(popupObject.GetComponent<RectTransform>());
+            equipmentDetailPopup = popupObject.AddComponent<EquipmentDetailPopupUI>();
+        }
+
+        equipmentDetailPopup.SetVisible(false);
+        return true;
     }
 
     private void EnsureTitle(Transform parent)
