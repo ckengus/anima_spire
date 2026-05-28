@@ -369,6 +369,32 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         selectedEquipmentFilterName = filterName;
         Debug.Log("Equipment filter selected: " + filterName);
         RefreshEquipmentFilterButtonVisuals();
+        RefreshOwnedEquipmentCodexCards();
+    }
+
+    private EquipmentCategory GetSelectedEquipmentCategory()
+    {
+        switch (selectedEquipmentFilterName)
+        {
+            case "\uBB34\uAE30":
+                return EquipmentCategory.Weapon;
+            case "\uBAA9\uAC78\uC774":
+                return EquipmentCategory.Necklace;
+            case "\uADC0\uACE0\uB9AC":
+                return EquipmentCategory.Earring;
+            case "\uBC18\uC9C0":
+                return EquipmentCategory.Ring;
+            case "\uBAA8\uC790":
+                return EquipmentCategory.Hat;
+            case "\uC637":
+                return EquipmentCategory.Clothes;
+            case "\uC7A5\uAC11":
+                return EquipmentCategory.Gloves;
+            case "\uC2E0\uBC1C":
+                return EquipmentCategory.Shoes;
+            default:
+                return EquipmentCategory.All;
+        }
     }
 
     private void RefreshEquipmentFilterButtonVisuals()
@@ -536,12 +562,20 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
         IReadOnlyList<EquipmentDefinition> codexDefinitions = EquipmentCatalog.GetAllCodexDefinitions();
         Dictionary<EquipmentId, Dictionary<EquipmentTier, int>> ownedCountsById = BuildOwnedCountsById();
+        EquipmentCategory selectedCategory = GetSelectedEquipmentCategory();
+        int cardIndex = 1;
 
         for (int i = 0; i < codexDefinitions.Count; i++)
         {
             EquipmentDefinition definition = codexDefinitions[i];
+            if (selectedCategory != EquipmentCategory.All && definition.category != selectedCategory)
+            {
+                continue;
+            }
+
             bool isOwned = ownedCountsById.TryGetValue(definition.id, out Dictionary<EquipmentTier, int> tierCounts);
-            EnsureOwnedEquipmentCodexCard(content, i + 1, definition, isOwned, tierCounts);
+            EnsureOwnedEquipmentCodexCard(content, cardIndex, definition, isOwned, tierCounts);
+            cardIndex++;
         }
     }
 
