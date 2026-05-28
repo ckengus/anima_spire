@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainTabController : MonoBehaviour
@@ -13,11 +14,14 @@ public class MainTabController : MonoBehaviour
     private const float HudSafeAreaPadding = 20f;
     private const float TabContentPadding = 28f;
     private const float TabContentHudGap = 16f;
+    private const float GlobalTabButtonWidth = 82f;
+    private const float GlobalTabButtonHeight = 72f;
 
     [SerializeField] private GameObject headerPanel;
     [SerializeField] private GameObject combatPanel;
     [SerializeField] private GameObject infoPanel;
     [SerializeField] private GameObject bottomMenuPanel;
+    [SerializeField] private GameObject bottomGlobalTabArea;
     [SerializeField] private GameObject tabContentPanel;
     [SerializeField] private GameObject equipmentPanel;
     [SerializeField] private Transform equipmentRootTarget;
@@ -55,6 +59,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
+        SetBottomMenuAsLastSibling();
     }
 
     public void ShowEquipment()
@@ -73,6 +78,7 @@ public class MainTabController : MonoBehaviour
         combatPanel = FindPanelIfMissing(combatPanel, "CombatPanel");
         infoPanel = FindPanelIfMissing(infoPanel, "InfoPanel");
         bottomMenuPanel = FindPanelIfMissing(bottomMenuPanel, "BottomMenuPanel");
+        bottomGlobalTabArea = FindPanelIfMissing(bottomGlobalTabArea, "BottomGlobalTabArea");
         tabContentPanel = FindPanelIfMissing(tabContentPanel, "TabContentPanel");
         equipmentPanel = FindPanelIfMissing(equipmentPanel, "EquipmentPanel");
 
@@ -90,7 +96,64 @@ public class MainTabController : MonoBehaviour
         }
 
         Transform found = transform.Find(panelName);
+        if (found == null)
+        {
+            found = FindDescendantByName(transform, panelName);
+        }
+
+        if (found == null)
+        {
+            found = FindSceneDescendantByName(panelName);
+        }
+
         return found != null ? found.gameObject : null;
+    }
+
+    private Transform FindDescendantByName(Transform parent, string objectName)
+    {
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.name == objectName)
+            {
+                return child;
+            }
+
+            Transform found = FindDescendantByName(child, objectName);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    private Transform FindSceneDescendantByName(string objectName)
+    {
+        Scene scene = gameObject.scene;
+        if (!scene.IsValid())
+        {
+            return null;
+        }
+
+        GameObject[] rootObjects = scene.GetRootGameObjects();
+        for (int i = 0; i < rootObjects.Length; i++)
+        {
+            Transform root = rootObjects[i].transform;
+            if (root.name == objectName)
+            {
+                return root;
+            }
+
+            Transform found = FindDescendantByName(root, objectName);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     private void EnsureThreeAreaLayout()
@@ -298,14 +361,238 @@ public class MainTabController : MonoBehaviour
 
     private void EnsureBottomMenuButtons()
     {
+        CleanupBottomMenuPanelTabs();
+        EnsureBottomGlobalTabArea();
+    }
+
+    private void CleanupBottomMenuPanelTabs()
+    {
         if (bottomMenuPanel == null)
         {
             return;
         }
 
-        EnsureBottomMenuLayout();
-        EnsureButton("BattleButton", "Battle", ShowBattle);
-        EnsureButton("EquipmentButton", "Equipment", ShowEquipment);
+        ClearBottomMenuTabChildren();
+        bottomMenuPanel.SetActive(false);
+    }
+
+    private void ClearBottomMenuTabChildren()
+    {
+        for (int i = bottomMenuPanel.transform.childCount - 1; i >= 0; i--)
+        {
+            Transform child = bottomMenuPanel.transform.GetChild(i);
+            if (!IsBottomMenuTabChild(child.name))
+            {
+                continue;
+            }
+
+            child.SetParent(null, false);
+            Destroy(child.gameObject);
+        }
+    }
+
+    private bool IsBottomMenuTabChild(string objectName)
+    {
+        return objectName == "BattleButton"
+            || objectName == "EquipmentButton"
+            || objectName.StartsWith("GlobalTabButton_")
+            || objectName.StartsWith("GlobalTabSpacer_")
+            || objectName.StartsWith("GlobalTabCard_");
+    }
+
+    private void EnsureBottomGlobalTabArea()
+    {
+        if (bottomGlobalTabArea == null)
+        {
+            bottomGlobalTabArea = new GameObject("BottomGlobalTabArea", typeof(RectTransform)).gameObject;
+            Transform parent = FindSceneDescendantByName("SafeAreaRoot");
+            bottomGlobalTabArea.transform.SetParent(parent != null ? parent : transform, false);
+            ApplyAnchors(bottomGlobalTabArea, Vector2.zero, new Vector2(1f, BottomMenuRatio));
+        }
+
+        bottomGlobalTabArea.SetActive(true);
+
+        EnsureTabBarBackground(bottomGlobalTabArea.transform);
+        Transform iconRow = EnsureGlobalTabIconRow(bottomGlobalTabArea.transform);
+        ClearChildren(iconRow);
+        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_Left");
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Combat", "Label_Combat", "\uC804\uD22C", new Color(0.72f, 0.18f, 0.18f, 0.96f), ShowBattle);
+        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_01");
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Hero", "Label_Hero", "\uC601\uC6C5", new Color(0.2f, 0.23f, 0.3f, 0.96f), ShowHeroTabPlaceholder);
+        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_02");
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Laboratory", "Label_Laboratory", "\uC5F0\uAD6C\uC2E4", new Color(0.18f, 0.36f, 0.68f, 0.96f), ShowLaboratoryTabPlaceholder);
+        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_03");
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Guild", "Label_Guild", "\uD559\uD68C", new Color(0.22f, 0.25f, 0.32f, 0.96f), ShowGuildTabPlaceholder);
+        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_04");
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Shop", "Label_Shop", "\uC0C1\uC810", new Color(0.25f, 0.28f, 0.34f, 0.96f), ShowShopTabPlaceholder);
+        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_Right");
+
+        iconRow.SetAsLastSibling();
+        SetBottomMenuAsLastSibling();
+    }
+
+    private void EnsureTabBarBackground(Transform parent)
+    {
+        Transform existing = parent.Find("TabBarBackground");
+        GameObject backgroundObject = existing != null
+            ? existing.gameObject
+            : new GameObject("TabBarBackground", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        backgroundObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = backgroundObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image image = backgroundObject.GetComponent<Image>();
+        image.color = new Color(0.02f, 0.025f, 0.035f, 0.92f);
+        image.raycastTarget = false;
+
+        backgroundObject.transform.SetAsFirstSibling();
+    }
+
+    private Transform EnsureGlobalTabIconRow(Transform parent)
+    {
+        Transform existing = parent.Find("GlobalTabIconRow");
+        GameObject rowObject = existing != null
+            ? existing.gameObject
+            : new GameObject("GlobalTabIconRow", typeof(RectTransform));
+        rowObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = rowObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        HorizontalLayoutGroup layoutGroup = rowObject.GetComponent<HorizontalLayoutGroup>();
+        if (layoutGroup == null)
+        {
+            layoutGroup = rowObject.AddComponent<HorizontalLayoutGroup>();
+        }
+
+        layoutGroup.padding = new RectOffset(12, 12, 8, 8);
+        layoutGroup.spacing = 0f;
+        layoutGroup.childAlignment = TextAnchor.MiddleCenter;
+        layoutGroup.childControlWidth = true;
+        layoutGroup.childControlHeight = true;
+        layoutGroup.childForceExpandWidth = false;
+        layoutGroup.childForceExpandHeight = false;
+
+        return rowObject.transform;
+    }
+
+    private void ClearChildren(Transform parent)
+    {
+        for (int i = parent.childCount - 1; i >= 0; i--)
+        {
+            Transform child = parent.GetChild(i);
+            child.SetParent(null, false);
+            Destroy(child.gameObject);
+        }
+    }
+
+    private GameObject EnsureGlobalTabSpacer(Transform parent, string objectName)
+    {
+        GameObject spacerObject = new GameObject(objectName, typeof(RectTransform), typeof(LayoutElement));
+        spacerObject.transform.SetParent(parent, false);
+
+        LayoutElement layoutElement = spacerObject.GetComponent<LayoutElement>();
+        layoutElement.minWidth = 0f;
+        layoutElement.preferredWidth = 0f;
+        layoutElement.flexibleWidth = 1f;
+        layoutElement.flexibleHeight = 0f;
+
+        return spacerObject;
+    }
+
+    private Button EnsureGlobalTabCard(Transform parent, string objectName, string labelObjectName, string label, Color color, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button), typeof(LayoutElement));
+        buttonObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = buttonObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.sizeDelta = new Vector2(GlobalTabButtonWidth, GlobalTabButtonHeight);
+
+        LayoutElement layoutElement = buttonObject.GetComponent<LayoutElement>();
+        layoutElement.minWidth = GlobalTabButtonWidth;
+        layoutElement.preferredWidth = GlobalTabButtonWidth;
+        layoutElement.minHeight = GlobalTabButtonHeight;
+        layoutElement.preferredHeight = GlobalTabButtonHeight;
+        layoutElement.flexibleWidth = 0f;
+        layoutElement.flexibleHeight = 0f;
+
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = color;
+        image.raycastTarget = true;
+
+        Button button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = image;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(onClick);
+
+        Text text = EnsureGlobalTabLabel(buttonObject.transform, labelObjectName, label);
+        text.text = label;
+        text.fontSize = 18;
+        text.resizeTextMinSize = 12;
+        text.resizeTextMaxSize = 18;
+
+        return button;
+    }
+
+    private Text EnsureGlobalTabLabel(Transform buttonTransform, string objectName, string label)
+    {
+        GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(buttonTransform, false);
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 18;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 12;
+        text.resizeTextMaxSize = 18;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        text.text = label;
+
+        return text;
+    }
+
+    private void ShowHeroTabPlaceholder()
+    {
+        ShowUnavailableGlobalTab("Hero tab is not implemented yet.");
+    }
+
+    private void ShowLaboratoryTabPlaceholder()
+    {
+        ShowUnavailableGlobalTab("Laboratory tab shell is not implemented yet.");
+    }
+
+    private void ShowGuildTabPlaceholder()
+    {
+        ShowUnavailableGlobalTab("Guild tab is not implemented yet.");
+    }
+
+    private void ShowShopTabPlaceholder()
+    {
+        ShowUnavailableGlobalTab("Shop tab is not implemented yet.");
+    }
+
+    private void ShowUnavailableGlobalTab(string message)
+    {
+        Debug.Log(message);
+        ShowBattle();
         SetBottomMenuAsLastSibling();
     }
 
@@ -317,13 +604,13 @@ public class MainTabController : MonoBehaviour
             layoutGroup = bottomMenuPanel.AddComponent<HorizontalLayoutGroup>();
         }
 
-        layoutGroup.padding = new RectOffset(28, 28, 24, 24);
-        layoutGroup.spacing = 24f;
+        layoutGroup.padding = new RectOffset(12, 12, 8, 8);
+        layoutGroup.spacing = 0f;
         layoutGroup.childAlignment = TextAnchor.MiddleCenter;
         layoutGroup.childControlWidth = true;
         layoutGroup.childControlHeight = true;
-        layoutGroup.childForceExpandWidth = true;
-        layoutGroup.childForceExpandHeight = true;
+        layoutGroup.childForceExpandWidth = false;
+        layoutGroup.childForceExpandHeight = false;
     }
 
     private void EnsureEventSystem()
@@ -545,6 +832,12 @@ public class MainTabController : MonoBehaviour
 
     private void SetBottomMenuAsLastSibling()
     {
+        if (bottomGlobalTabArea != null)
+        {
+            bottomGlobalTabArea.transform.SetAsLastSibling();
+            return;
+        }
+
         if (bottomMenuPanel != null)
         {
             bottomMenuPanel.transform.SetAsLastSibling();
