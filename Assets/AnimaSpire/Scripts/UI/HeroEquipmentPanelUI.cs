@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,34 +34,6 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         "\uC637",
         "\uC7A5\uAC11",
         "\uC2E0\uBC1C"
-    };
-
-    private static readonly string[] OwnedEquipmentPlaceholderNames =
-    {
-        "\uBB34\uAE30 A",
-        "\uBAA9\uAC78\uC774 A",
-        "\uADC0\uACE0\uB9AC A",
-        "\uBC18\uC9C0 A",
-        "\uBAA8\uC790 A",
-        "\uC637 A",
-        "\uC7A5\uAC11 A",
-        "\uC2E0\uBC1C A",
-        "\uBB34\uAE30 B",
-        "\uBAA9\uAC78\uC774 B",
-        "\uADC0\uACE0\uB9AC B",
-        "\uBC18\uC9C0 B",
-        "\uBAA8\uC790 B",
-        "\uC637 B",
-        "\uC7A5\uAC11 B",
-        "\uC2E0\uBC1C B",
-        "\uBB34\uAE30 C",
-        "\uBAA9\uAC78\uC774 C",
-        "\uADC0\uACE0\uB9AC C",
-        "\uBC18\uC9C0 C",
-        "\uBAA8\uC790 C",
-        "\uC637 C",
-        "\uC7A5\uAC11 C",
-        "\uC2E0\uBC1C C"
     };
 
     private Text selectedSlotText;
@@ -116,6 +89,8 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         {
             RefreshWeaponSlotUpgradePopup();
         }
+
+        RefreshOwnedEquipmentCodexCards();
     }
 
     public void ShowPanel()
@@ -479,10 +454,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         scrollRect.viewport = viewportObject.GetComponent<RectTransform>();
         scrollRect.content = contentObject.GetComponent<RectTransform>();
 
-        for (int i = 0; i < OwnedEquipmentPlaceholderNames.Length; i++)
-        {
-            EnsureOwnedEquipmentCard(contentObject.transform, i + 1, OwnedEquipmentPlaceholderNames[i]);
-        }
+        RefreshOwnedEquipmentCodexCards(contentObject.transform);
     }
 
     private GameObject EnsureOwnedEquipmentContent(Transform parent)
@@ -529,9 +501,104 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         return contentObject;
     }
 
-    private void EnsureOwnedEquipmentCard(Transform parent, int index, string cardName)
+    private void RefreshOwnedEquipmentCodexCards()
     {
-        GameObject cardObject = EnsurePanel(parent, "OwnedEquipmentCard_" + index.ToString("000"), new Color(0.13f, 0.16f, 0.22f, 0.98f));
+        Transform content = GetOwnedEquipmentContentTransform();
+        if (content == null)
+        {
+            return;
+        }
+
+        RefreshOwnedEquipmentCodexCards(content);
+    }
+
+    private Transform GetOwnedEquipmentContentTransform()
+    {
+        if (equipmentContentRoot == null)
+        {
+            equipmentContentRoot = GetExistingRootObject();
+        }
+
+        if (equipmentContentRoot == null)
+        {
+            return null;
+        }
+
+        Transform ownedArea = GetDirectChild(equipmentContentRoot.transform, "OwnedEquipmentArea");
+        Transform scrollRect = ownedArea != null ? GetDirectChild(ownedArea, "OwnedEquipmentScrollRect") : null;
+        Transform viewport = scrollRect != null ? GetDirectChild(scrollRect, "OwnedEquipmentViewport") : null;
+        return viewport != null ? GetDirectChild(viewport, "OwnedEquipmentContent") : null;
+    }
+
+    private void RefreshOwnedEquipmentCodexCards(Transform content)
+    {
+        ClearChildren(content);
+
+        IReadOnlyList<EquipmentDefinition> codexDefinitions = EquipmentCatalog.GetAllCodexDefinitions();
+        Dictionary<EquipmentId, Dictionary<EquipmentTier, int>> ownedCountsById = BuildOwnedCountsById();
+
+        for (int i = 0; i < codexDefinitions.Count; i++)
+        {
+            EquipmentDefinition definition = codexDefinitions[i];
+            bool isOwned = ownedCountsById.TryGetValue(definition.id, out Dictionary<EquipmentTier, int> tierCounts);
+            EnsureOwnedEquipmentCodexCard(content, i + 1, definition, isOwned, tierCounts);
+        }
+    }
+
+    private Dictionary<EquipmentId, Dictionary<EquipmentTier, int>> BuildOwnedCountsById()
+    {
+        Dictionary<EquipmentId, Dictionary<EquipmentTier, int>> ownedCountsById = new Dictionary<EquipmentId, Dictionary<EquipmentTier, int>>();
+        if (equipmentManager == null)
+        {
+            return ownedCountsById;
+        }
+
+        List<KeyValuePair<EquipmentStackKey, int>> ownedStacks = equipmentManager.GetOwnedStacksSnapshot();
+        for (int i = 0; i < ownedStacks.Count; i++)
+        {
+            KeyValuePair<EquipmentStackKey, int> stack = ownedStacks[i];
+            if (stack.Value <= 0)
+            {
+                continue;
+            }
+
+            EquipmentId id = stack.Key.id;
+            EquipmentTier tier = stack.Key.tier;
+            if (!ownedCountsById.TryGetValue(id, out Dictionary<EquipmentTier, int> tierCounts))
+            {
+                tierCounts = new Dictionary<EquipmentTier, int>();
+                ownedCountsById[id] = tierCounts;
+            }
+
+            tierCounts[tier] = tierCounts.TryGetValue(tier, out int currentCount)
+                ? currentCount + stack.Value
+                : stack.Value;
+        }
+
+        return ownedCountsById;
+    }
+
+    private void ClearChildren(Transform parent)
+    {
+        for (int i = parent.childCount - 1; i >= 0; i--)
+        {
+            Transform child = parent.GetChild(i);
+            child.SetParent(null, false);
+            Destroy(child.gameObject);
+        }
+    }
+
+    private void EnsureOwnedEquipmentCodexCard(
+        Transform parent,
+        int index,
+        EquipmentDefinition definition,
+        bool isOwned,
+        Dictionary<EquipmentTier, int> tierCounts)
+    {
+        Color cardColor = isOwned
+            ? new Color(0.14f, 0.19f, 0.27f, 0.98f)
+            : new Color(0.06f, 0.07f, 0.09f, 0.98f);
+        GameObject cardObject = EnsurePanel(parent, "EquipmentCodexCard_" + index.ToString("000"), cardColor);
 
         Button button = cardObject.GetComponent<Button>();
         if (button == null)
@@ -541,7 +608,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
         button.targetGraphic = cardObject.GetComponent<Image>();
         button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(() => Debug.Log("Owned equipment card clicked: " + cardName));
+        button.onClick.AddListener(() => Debug.Log("Equipment codex card clicked: " + definition.id + ", owned=" + isOwned));
 
         VerticalLayoutGroup layoutGroup = cardObject.GetComponent<VerticalLayoutGroup>();
         if (layoutGroup == null)
@@ -557,20 +624,60 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         layoutGroup.childForceExpandWidth = true;
         layoutGroup.childForceExpandHeight = false;
 
-        GameObject iconObject = EnsurePanel(cardObject.transform, "IconPlaceholder", new Color(0.24f, 0.32f, 0.46f, 1f));
+        Color iconColor = isOwned
+            ? new Color(0.24f, 0.32f, 0.46f, 1f)
+            : new Color(0.1f, 0.12f, 0.16f, 1f);
+        GameObject iconObject = EnsurePanel(cardObject.transform, "IconPlaceholder", iconColor);
         LayoutElement iconLayout = EnsureLayoutElement(iconObject);
         iconLayout.minHeight = 58f;
         iconLayout.preferredHeight = 66f;
         iconLayout.flexibleWidth = 1f;
 
         Text iconText = EnsureText(iconObject.transform, "IconText", "?", 24, TextAnchor.MiddleCenter, 0f);
-        iconText.color = new Color(0.9f, 0.94f, 1f, 1f);
+        iconText.color = isOwned
+            ? new Color(0.9f, 0.94f, 1f, 1f)
+            : new Color(0.44f, 0.5f, 0.58f, 1f);
 
-        Text nameText = EnsureText(cardObject.transform, "NameText", cardName, 20, TextAnchor.MiddleCenter, 34f);
-        nameText.color = Color.white;
+        Text nameText = EnsureText(cardObject.transform, "NameText", definition.displayName, 20, TextAnchor.MiddleCenter, 34f);
+        nameText.color = isOwned ? Color.white : new Color(0.58f, 0.64f, 0.72f, 1f);
 
-        Text infoText = EnsureText(cardObject.transform, "InfoText", "Placeholder x1", 16, TextAnchor.MiddleCenter, 28f);
-        infoText.color = new Color(0.76f, 0.82f, 0.9f, 1f);
+        Text stateText = EnsureText(cardObject.transform, "StateText", isOwned ? "\uD68D\uB4DD" : "\uBBF8\uD68D\uB4DD", 16, TextAnchor.MiddleCenter, 26f);
+        stateText.color = isOwned
+            ? new Color(0.72f, 0.9f, 0.76f, 1f)
+            : new Color(0.48f, 0.52f, 0.58f, 1f);
+
+        Text infoText = EnsureText(cardObject.transform, "InfoText", isOwned ? BuildTierCountSummary(tierCounts) : string.Empty, 15, TextAnchor.MiddleCenter, 34f);
+        infoText.color = isOwned
+            ? new Color(0.76f, 0.82f, 0.9f, 1f)
+            : new Color(0.38f, 0.42f, 0.48f, 1f);
+    }
+
+    private string BuildTierCountSummary(Dictionary<EquipmentTier, int> tierCounts)
+    {
+        if (tierCounts == null || tierCounts.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        string summary = string.Empty;
+        EquipmentTier[] tiers = (EquipmentTier[])System.Enum.GetValues(typeof(EquipmentTier));
+        for (int i = 0; i < tiers.Length; i++)
+        {
+            EquipmentTier tier = tiers[i];
+            if (!tierCounts.TryGetValue(tier, out int count) || count <= 0)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(summary))
+            {
+                summary += " / ";
+            }
+
+            summary += tier + " x" + count;
+        }
+
+        return summary;
     }
 
     private GameObject GetExistingRootObject()
