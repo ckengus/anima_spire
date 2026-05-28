@@ -25,6 +25,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     private Text equipmentNameText;
     private Text effectText;
     private GameObject equipmentContentRoot;
+    private GameObject weaponSlotUpgradePopupRoot;
     private string selectedSlotName;
     private bool hasReceivedRootTarget;
     private bool isPanelVisible;
@@ -42,7 +43,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
         if (isPanelVisible && EnsureUi() && string.IsNullOrEmpty(selectedSlotName))
         {
-            SelectSlot(OffensiveSlotNames[0]);
+            SelectSlot(OffensiveSlotNames[0], false);
         }
     }
 
@@ -51,11 +52,14 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         hasReceivedRootTarget = true;
         equipmentRootTarget = target;
         equipmentContentRoot = GetExistingRootObject();
+        weaponSlotUpgradePopupRoot = GetExistingWeaponSlotUpgradePopupObject();
 
         if (equipmentContentRoot != null)
         {
             equipmentContentRoot.SetActive(isPanelVisible);
         }
+
+        HideWeaponSlotUpgradePopup();
     }
 
     public void ShowPanel()
@@ -80,6 +84,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
                 equipmentContentRoot.SetActive(false);
             }
 
+            HideWeaponSlotUpgradePopup();
             return;
         }
 
@@ -89,10 +94,11 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         }
 
         equipmentContentRoot.SetActive(true);
+        HideWeaponSlotUpgradePopup();
 
         if (string.IsNullOrEmpty(selectedSlotName))
         {
-            SelectSlot(OffensiveSlotNames[0]);
+            SelectSlot(OffensiveSlotNames[0], false);
         }
     }
 
@@ -155,6 +161,18 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         }
 
         const string objectName = "HeroEquipmentContent";
+        Transform existing = GetDirectChild(equipmentRootTarget, objectName);
+        return existing != null ? existing.gameObject : null;
+    }
+
+    private GameObject GetExistingWeaponSlotUpgradePopupObject()
+    {
+        if (equipmentRootTarget == null)
+        {
+            return null;
+        }
+
+        const string objectName = "WeaponSlotUpgradePopup";
         Transform existing = GetDirectChild(equipmentRootTarget, objectName);
         return existing != null ? existing.gameObject : null;
     }
@@ -457,6 +475,149 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         return text;
     }
 
+    private bool EnsureWeaponSlotUpgradePopup()
+    {
+        if (equipmentRootTarget == null)
+        {
+            Debug.LogError("HeroEquipmentPanelUI equipmentRootTarget is missing. WeaponSlotUpgradePopup cannot be created.");
+            return false;
+        }
+
+        const string objectName = "WeaponSlotUpgradePopup";
+        Transform existing = GetDirectChild(equipmentRootTarget, objectName);
+        weaponSlotUpgradePopupRoot = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        weaponSlotUpgradePopupRoot.transform.SetParent(equipmentRootTarget, false);
+
+        RectTransform popupRect = weaponSlotUpgradePopupRoot.GetComponent<RectTransform>();
+        StretchToParent(popupRect);
+
+        Image dimImage = weaponSlotUpgradePopupRoot.GetComponent<Image>();
+        if (dimImage == null)
+        {
+            dimImage = weaponSlotUpgradePopupRoot.AddComponent<Image>();
+        }
+
+        dimImage.color = new Color(0f, 0f, 0f, 0.58f);
+        dimImage.raycastTarget = true;
+
+        GameObject cardObject = EnsurePanel(weaponSlotUpgradePopupRoot.transform, "WeaponSlotUpgradeCard", new Color(0.09f, 0.12f, 0.17f, 0.98f));
+        RectTransform cardRect = cardObject.GetComponent<RectTransform>();
+        cardRect.localScale = Vector3.one;
+        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRect.pivot = new Vector2(0.5f, 0.5f);
+        cardRect.anchoredPosition = Vector2.zero;
+        cardRect.sizeDelta = new Vector2(720f, 520f);
+        cardRect.offsetMin = new Vector2(-360f, -260f);
+        cardRect.offsetMax = new Vector2(360f, 260f);
+
+        VerticalLayoutGroup cardLayout = cardObject.GetComponent<VerticalLayoutGroup>();
+        if (cardLayout == null)
+        {
+            cardLayout = cardObject.AddComponent<VerticalLayoutGroup>();
+        }
+
+        cardLayout.padding = new RectOffset(34, 34, 30, 28);
+        cardLayout.spacing = 14f;
+        cardLayout.childAlignment = TextAnchor.UpperCenter;
+        cardLayout.childControlWidth = true;
+        cardLayout.childControlHeight = true;
+        cardLayout.childForceExpandWidth = true;
+        cardLayout.childForceExpandHeight = false;
+
+        Text titleText = EnsureText(cardObject.transform, "WeaponSlotUpgradeTitleText", "\uBB34\uAE30 \uC2AC\uB86F \uAC15\uD654", 34, TextAnchor.MiddleCenter, 62f);
+        titleText.color = new Color(0.94f, 0.97f, 1f, 1f);
+
+        Text levelText = EnsureText(cardObject.transform, "WeaponSlotUpgradeLevelText", "\uD604\uC7AC \uB808\uBCA8: Lv. 0", 28, TextAnchor.MiddleCenter, 50f);
+        levelText.color = new Color(0.84f, 0.9f, 1f, 1f);
+
+        Text costText = EnsureText(cardObject.transform, "WeaponSlotUpgradeCostText", "\uAC15\uD654 \uBE44\uC6A9: 10 Gold", 28, TextAnchor.MiddleCenter, 50f);
+        costText.color = new Color(1f, 0.91f, 0.62f, 1f);
+
+        Text descriptionText = EnsureText(cardObject.transform, "WeaponSlotUpgradeDescriptionText", "\uC2E4\uC81C \uAC15\uD654 \uB85C\uC9C1\uC740 031M\uC5D0\uC11C \uC5F0\uACB0 \uC608\uC815", 24, TextAnchor.MiddleCenter, 72f);
+        descriptionText.color = new Color(0.75f, 0.8f, 0.88f, 1f);
+
+        Transform buttonRow = EnsureHorizontalRow(cardObject.transform, "WeaponSlotUpgradeButtonRow", 86f);
+        EnsureWeaponSlotUpgradeButton(buttonRow);
+        EnsureWeaponSlotUpgradeCloseButton(buttonRow);
+
+        weaponSlotUpgradePopupRoot.SetActive(false);
+        return true;
+    }
+
+    private void EnsureWeaponSlotUpgradeButton(Transform parent)
+    {
+        GameObject buttonObject = EnsurePanel(parent, "WeaponSlotUpgradeButton", new Color(0.25f, 0.48f, 0.84f, 0.98f));
+        LayoutElement layoutElement = EnsureLayoutElement(buttonObject);
+        layoutElement.minHeight = 76f;
+        layoutElement.preferredHeight = 82f;
+        layoutElement.flexibleWidth = 1f;
+
+        Button button = buttonObject.GetComponent<Button>();
+        if (button == null)
+        {
+            button = buttonObject.AddComponent<Button>();
+        }
+
+        button.targetGraphic = buttonObject.GetComponent<Image>();
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() => Debug.Log("Weapon Slot upgrade placeholder clicked."));
+
+        EnsureText(buttonObject.transform, "Text", "\uAC15\uD654", 28, TextAnchor.MiddleCenter, 0f);
+    }
+
+    private void EnsureWeaponSlotUpgradeCloseButton(Transform parent)
+    {
+        GameObject buttonObject = EnsurePanel(parent, "WeaponSlotUpgradeCloseButton", new Color(0.18f, 0.21f, 0.28f, 0.98f));
+        LayoutElement layoutElement = EnsureLayoutElement(buttonObject);
+        layoutElement.minHeight = 76f;
+        layoutElement.preferredHeight = 82f;
+        layoutElement.flexibleWidth = 1f;
+
+        Button button = buttonObject.GetComponent<Button>();
+        if (button == null)
+        {
+            button = buttonObject.AddComponent<Button>();
+        }
+
+        button.targetGraphic = buttonObject.GetComponent<Image>();
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(HideWeaponSlotUpgradePopup);
+
+        EnsureText(buttonObject.transform, "Text", "\uB2EB\uAE30", 28, TextAnchor.MiddleCenter, 0f);
+    }
+
+    private void ShowWeaponSlotUpgradePopup()
+    {
+        if (!EnsureWeaponSlotUpgradePopup())
+        {
+            return;
+        }
+
+        weaponSlotUpgradePopupRoot.SetActive(true);
+        weaponSlotUpgradePopupRoot.transform.SetAsLastSibling();
+    }
+
+    private void HideWeaponSlotUpgradePopup()
+    {
+        if (weaponSlotUpgradePopupRoot == null)
+        {
+            weaponSlotUpgradePopupRoot = GetExistingWeaponSlotUpgradePopupObject();
+        }
+
+        if (weaponSlotUpgradePopupRoot != null)
+        {
+            weaponSlotUpgradePopupRoot.SetActive(false);
+        }
+    }
+
+    private bool IsWeaponSlot(string slotName)
+    {
+        return slotName == OffensiveSlotNames[0];
+    }
+
     private Transform GetDirectChild(Transform parent, string childName)
     {
         for (int i = 0; i < parent.childCount; i++)
@@ -494,7 +655,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         return layoutElement;
     }
 
-    private void SelectSlot(string slotName)
+    private void SelectSlot(string slotName, bool allowPopup = true)
     {
         selectedSlotName = slotName;
 
@@ -511,6 +672,21 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         if (effectText != null)
         {
             effectText.text = "\uD6A8\uACFC: \uB2E4\uC74C \uB2E8\uACC4\uC5D0\uC11C \uD45C\uC2DC \uC608\uC815";
+        }
+
+        if (!allowPopup)
+        {
+            HideWeaponSlotUpgradePopup();
+            return;
+        }
+
+        if (IsWeaponSlot(slotName))
+        {
+            ShowWeaponSlotUpgradePopup();
+        }
+        else
+        {
+            HideWeaponSlotUpgradePopup();
         }
     }
 }
