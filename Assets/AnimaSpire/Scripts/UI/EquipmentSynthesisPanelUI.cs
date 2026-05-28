@@ -1,9 +1,28 @@
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 public sealed class EquipmentSynthesisPanelUI : MonoBehaviour
 {
     private bool hasBuiltUi;
+    private Button synthesisButton;
+    private Text resultText;
+    private UnityAction onSynthesisClicked;
+
+    public void SetCallbacks(UnityAction synthesisClicked)
+    {
+        onSynthesisClicked = synthesisClicked;
+    }
+
+    public void SetResultText(string message)
+    {
+        EnsureUi();
+
+        if (resultText != null)
+        {
+            resultText.text = message;
+        }
+    }
 
     public void ShowPanel()
     {
@@ -60,9 +79,9 @@ public sealed class EquipmentSynthesisPanelUI : MonoBehaviour
         buttonLayout.preferredHeight = 72f;
         buttonLayout.flexibleWidth = 0f;
 
-        Button button = buttonObject.AddComponent<Button>();
-        button.targetGraphic = buttonObject.GetComponent<Image>();
-        button.onClick.AddListener(() => Debug.Log("Equipment synthesis button clicked."));
+        synthesisButton = buttonObject.AddComponent<Button>();
+        synthesisButton.targetGraphic = buttonObject.GetComponent<Image>();
+        synthesisButton.onClick.AddListener(HandleSynthesisButtonClicked);
 
         Text buttonText = EnsureText(buttonObject.transform, "Text", "\uC7A5\uBE44 \uC5F0\uC131", 24, TextAnchor.MiddleCenter);
         StretchToParent(buttonText.GetComponent<RectTransform>());
@@ -73,11 +92,22 @@ public sealed class EquipmentSynthesisPanelUI : MonoBehaviour
         resultLayout.preferredHeight = 140f;
         resultLayout.flexibleWidth = 1f;
 
-        Text resultText = EnsureText(resultAreaObject.transform, "ResultText", "\uC544\uC9C1 \uC5F0\uC131 \uACB0\uACFC \uC5C6\uC74C", 22, TextAnchor.MiddleCenter);
+        resultText = EnsureText(resultAreaObject.transform, "ResultText", "\uC544\uC9C1 \uC5F0\uC131 \uACB0\uACFC \uC5C6\uC74C", 22, TextAnchor.MiddleCenter);
         resultText.color = new Color(0.78f, 0.84f, 0.92f, 1f);
         StretchToParent(resultText.GetComponent<RectTransform>());
 
         hasBuiltUi = true;
+    }
+
+    private void HandleSynthesisButtonClicked()
+    {
+        if (onSynthesisClicked != null)
+        {
+            onSynthesisClicked.Invoke();
+            return;
+        }
+
+        Debug.Log("Equipment synthesis button clicked.");
     }
 
     private GameObject EnsurePanel(Transform parent, string objectName, Color color)

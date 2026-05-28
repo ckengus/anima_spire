@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public class EquipmentManager : MonoBehaviour
 {
-    private const int MagicBookSummonCost = 10;
+    private const int EquipmentSynthesisCost = 10;
     private const int WeaponSlotUpgradeCost = 10;
     private const int WeaponSlotAttackBonusPerLevel = 1;
 
@@ -14,13 +14,16 @@ public class EquipmentManager : MonoBehaviour
     private readonly EquipmentLoadoutState loadoutState = new EquipmentLoadoutState();
     private int weaponSlotLevel;
 
-    public int MagicBookCost => MagicBookSummonCost;
+    public int MagicBookCost => EquipmentSynthesisCost;
     public int WeaponSlotLevel => weaponSlotLevel;
     public static EquipmentManager Instance { get; private set; }
     public EquipmentCollectionState CollectionState => collectionState;
     public EquipmentLoadoutState LoadoutState => loadoutState;
 
+#pragma warning disable 0067
     public event Action<EquipmentId, EquipmentTier> OnMagicBookSummoned;
+#pragma warning restore 0067
+    public event Action<EquipmentId, EquipmentTier> OnEquipmentSynthesized;
     public event Action<EquipmentStackKey?> OnEquippedMagicBookChangedByGameplay;
     public event Action<int> OnWeaponSlotUpgraded;
 
@@ -60,34 +63,182 @@ public class EquipmentManager : MonoBehaviour
 
     public bool TrySummonMagicBook(out EquipmentDefinition summonedDefinition, out string message)
     {
-        summonedDefinition = null;
+        return TrySynthesizeEquipment(out summonedDefinition, out message);
+    }
+
+    public bool TrySynthesizeEquipment(out EquipmentDefinition synthesizedDefinition, out string message)
+    {
+        return TrySynthesizeEquipment(null, out synthesizedDefinition, out message);
+    }
+
+    public bool TrySynthesizeEquipment(IReadOnlyCollection<EquipmentCategory> categories, out EquipmentDefinition synthesizedDefinition, out string message)
+    {
+        synthesizedDefinition = null;
 
         if (gameManager == null)
         {
-            message = "Equipment system is not ready.";
+            message = "\uC7A5\uBE44 \uC2DC\uC2A4\uD15C\uC774 \uC900\uBE44\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.";
             return false;
         }
 
-        EquipmentId summonedId = UnityEngine.Random.value < 0.5f ? EquipmentId.AMagicBook : EquipmentId.BMagicBook;
-        EquipmentTier tier = EquipmentTier.T0;
-
-        if (!EquipmentCatalog.TryGetDefinition(summonedId, tier, out summonedDefinition))
+        if (gameManager.GetGold() < EquipmentSynthesisCost)
         {
-            message = "MagicBook data is missing.";
+            message = "Gold\uAC00 \uBD80\uC871\uD569\uB2C8\uB2E4.";
             return false;
         }
 
-        if (!gameManager.TrySpendGold(MagicBookSummonCost))
+        List<EquipmentSummonEntry> equipmentCandidates = BuildEquipmentCandidates(categories);
+        if (equipmentCandidates.Count == 0)
         {
-            summonedDefinition = null;
-            message = "Not enough Gold.";
+            message = "\uC5F0\uC131 \uAC00\uB2A5\uD55C \uC7A5\uBE44\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.";
             return false;
         }
 
-        collectionState.AddOwnedCount(summonedId, tier, 1);
-        OnMagicBookSummoned?.Invoke(summonedId, tier);
-        message = $"Summoned {summonedDefinition.displayName} {tier}";
+        int equipmentTotalWeight = CalculateTotalWeight(equipmentCandidates);
+        if (equipmentTotalWeight <= 0 || !TryRollEquipmentId(equipmentCandidates, equipmentTotalWeight, out EquipmentId selectedId))
+        {
+            message = "\uC5F0\uC131 \uAC00\uB2A5\uD55C \uC7A5\uBE44\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.";
+            return false;
+        }
+
+        List<TierCandidate> tierCandidates = BuildTierCandidates(selectedId);
+        if (tierCandidates.Count == 0)
+        {
+            message = "\uC5F0\uC131 \uAC00\uB2A5\uD55C \uD2F0\uC5B4\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.";
+            return false;
+        }
+
+        int tierTotalWeight = CalculateTotalWeight(tierCandidates);
+        if (tierTotalWeight <= 0 || !TryRollTier(tierCandidates, tierTotalWeight, out EquipmentTier selectedTier))
+        {
+            message = "\uC5F0\uC131 \uAC00\uB2A5\uD55C \uD2F0\uC5B4\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.";
+            return false;
+        }
+
+        if (!EquipmentCatalog.TryGetDefinition(selectedId, selectedTier, out EquipmentDefinition finalDefinition))
+        {
+            message = "\uC7A5\uBE44 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.";
+            return false;
+        }
+
+        if (!gameManager.TrySpendGold(EquipmentSynthesisCost))
+        {
+            message = "Gold\uAC00 \uBD80\uC871\uD569\uB2C8\uB2E4.";
+            return false;
+        }
+
+        collectionState.AddOwnedCount(selectedId, selectedTier, 1);
+        OnEquipmentSynthesized?.Invoke(selectedId, selectedTier);
+        synthesizedDefinition = finalDefinition;
+        message = $"\uC5F0\uC131 \uC131\uACF5: {finalDefinition.displayName} {selectedTier}";
         return true;
+    }
+
+    private List<EquipmentSummonEntry> BuildEquipmentCandidates(IReadOnlyCollection<EquipmentCategory> categories)
+    {
+        IReadOnlyList<EquipmentSummonEntry> entries = EquipmentCatalog.GetSummonableEquipmentEntries(categories);
+        List<EquipmentSummonEntry> candidates = new List<EquipmentSummonEntry>();
+        for (int i = 0; i < entries.Count; i++)
+        {
+            EquipmentSummonEntry entry = entries[i];
+            if (entry.weight > 0)
+            {
+                candidates.Add(entry);
+            }
+        }
+
+        return candidates;
+    }
+
+    private List<TierCandidate> BuildTierCandidates(EquipmentId selectedId)
+    {
+        IReadOnlyList<EquipmentTierWeightEntry> entries = EquipmentCatalog.GetSynthesisTierWeightEntries();
+        List<TierCandidate> candidates = new List<TierCandidate>();
+        for (int i = 0; i < entries.Count; i++)
+        {
+            EquipmentTierWeightEntry entry = entries[i];
+            if (entry.weight <= 0)
+            {
+                continue;
+            }
+
+            if (EquipmentCatalog.TryGetDefinition(selectedId, entry.tier, out EquipmentDefinition _))
+            {
+                candidates.Add(new TierCandidate(entry.tier, entry.weight));
+            }
+        }
+
+        return candidates;
+    }
+
+    private int CalculateTotalWeight(List<EquipmentSummonEntry> candidates)
+    {
+        int totalWeight = 0;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            totalWeight += candidates[i].weight;
+        }
+
+        return totalWeight;
+    }
+
+    private int CalculateTotalWeight(List<TierCandidate> candidates)
+    {
+        int totalWeight = 0;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            totalWeight += candidates[i].weight;
+        }
+
+        return totalWeight;
+    }
+
+    private bool TryRollEquipmentId(List<EquipmentSummonEntry> candidates, int totalWeight, out EquipmentId selectedId)
+    {
+        int roll = UnityEngine.Random.Range(0, totalWeight);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            EquipmentSummonEntry candidate = candidates[i];
+            roll -= candidate.weight;
+            if (roll < 0)
+            {
+                selectedId = candidate.id;
+                return true;
+            }
+        }
+
+        selectedId = default;
+        return false;
+    }
+
+    private bool TryRollTier(List<TierCandidate> candidates, int totalWeight, out EquipmentTier selectedTier)
+    {
+        int roll = UnityEngine.Random.Range(0, totalWeight);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            TierCandidate candidate = candidates[i];
+            roll -= candidate.weight;
+            if (roll < 0)
+            {
+                selectedTier = candidate.tier;
+                return true;
+            }
+        }
+
+        selectedTier = default;
+        return false;
+    }
+
+    private readonly struct TierCandidate
+    {
+        public TierCandidate(EquipmentTier tier, int weight)
+        {
+            this.tier = tier;
+            this.weight = weight;
+        }
+
+        public readonly EquipmentTier tier;
+        public readonly int weight;
     }
 
     public int GetWeaponSlotUpgradeCost(int currentLevel)

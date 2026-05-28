@@ -164,7 +164,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
         if (equipmentManager != null)
         {
-            equipmentManager.OnMagicBookSummoned += HandleMagicBookSummoned;
+            equipmentManager.OnEquipmentSynthesized += HandleEquipmentSynthesized;
             equipmentManager.OnEquippedMagicBookChangedByGameplay += HandleEquippedMagicBookChangedByGameplay;
             equipmentManager.OnWeaponSlotUpgraded += HandleWeaponSlotUpgraded;
         }
@@ -191,7 +191,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
         if (equipmentManager != null)
         {
-            equipmentManager.OnMagicBookSummoned -= HandleMagicBookSummoned;
+            equipmentManager.OnEquipmentSynthesized -= HandleEquipmentSynthesized;
             equipmentManager.OnEquippedMagicBookChangedByGameplay -= HandleEquippedMagicBookChangedByGameplay;
             equipmentManager.OnWeaponSlotUpgraded -= HandleWeaponSlotUpgraded;
         }
@@ -367,7 +367,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
         MarkDirty();
     }
 
-    private void HandleMagicBookSummoned(EquipmentId id, EquipmentTier tier)
+    private void HandleEquipmentSynthesized(EquipmentId id, EquipmentTier tier)
     {
         ScheduleSaveSoon();
     }
