@@ -246,6 +246,17 @@ public static class EquipmentCatalog
         definitions[1]
     };
 
+    private static readonly EquipmentSummonEntry[] summonableEquipmentEntries =
+    {
+        new EquipmentSummonEntry(EquipmentId.AMagicBook, 100),
+        new EquipmentSummonEntry(EquipmentId.BMagicBook, 100)
+    };
+
+    private static readonly EquipmentTierWeightEntry[] synthesisTierWeightEntries =
+    {
+        new EquipmentTierWeightEntry(EquipmentTier.T0, 100)
+    };
+
     public static IReadOnlyList<EquipmentDefinition> Definitions => definitions;
 
     public static IReadOnlyList<EquipmentDefinition> GetAllCodexDefinitions()
@@ -256,6 +267,54 @@ public static class EquipmentCatalog
     public static IReadOnlyList<EquipmentDefinition> GetSummonableDefinitions()
     {
         return summonableDefinitions;
+    }
+
+    public static IReadOnlyList<EquipmentSummonEntry> GetSummonableEquipmentEntries()
+    {
+        return summonableEquipmentEntries;
+    }
+
+    public static IReadOnlyList<EquipmentSummonEntry> GetSummonableEquipmentEntries(IReadOnlyCollection<EquipmentCategory> categories)
+    {
+        if (categories == null || categories.Count == 0 || ContainsCategory(categories, EquipmentCategory.All))
+        {
+            return summonableEquipmentEntries;
+        }
+
+        List<EquipmentSummonEntry> filteredEntries = new List<EquipmentSummonEntry>();
+        for (int i = 0; i < summonableEquipmentEntries.Length; i++)
+        {
+            EquipmentSummonEntry entry = summonableEquipmentEntries[i];
+            if (!TryGetDefinition(entry.id, EquipmentTier.T0, out EquipmentDefinition definition))
+            {
+                continue;
+            }
+
+            if (ContainsCategory(categories, definition.category))
+            {
+                filteredEntries.Add(entry);
+            }
+        }
+
+        return filteredEntries;
+    }
+
+    private static bool ContainsCategory(IReadOnlyCollection<EquipmentCategory> categories, EquipmentCategory category)
+    {
+        foreach (EquipmentCategory current in categories)
+        {
+            if (current == category)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static IReadOnlyList<EquipmentTierWeightEntry> GetSynthesisTierWeightEntries()
+    {
+        return synthesisTierWeightEntries;
     }
 
     public static bool TryGetDefinition(EquipmentId id, EquipmentTier tier, out EquipmentDefinition definition)

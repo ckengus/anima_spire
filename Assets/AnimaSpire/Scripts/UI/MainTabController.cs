@@ -948,8 +948,23 @@ public class MainTabController : MonoBehaviour
             controller = equipmentSynthesisPanel.AddComponent<EquipmentSynthesisPanelUI>();
         }
 
+        controller.SetCallbacks(HandleEquipmentSynthesisClicked);
         equipmentSynthesisPanelController = controller;
         equipmentSynthesisPanelController.HidePanel();
+    }
+
+    private void HandleEquipmentSynthesisClicked()
+    {
+        EnsureEquipmentManager();
+
+        if (equipmentManager == null)
+        {
+            equipmentSynthesisPanelController?.SetResultText("\uC7A5\uBE44 \uC2DC\uC2A4\uD15C\uC774 \uC900\uBE44\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+            return;
+        }
+
+        equipmentManager.TrySynthesizeEquipment(out EquipmentDefinition _, out string message);
+        equipmentSynthesisPanelController?.SetResultText(message);
     }
 
     private void StretchToParent(RectTransform rectTransform)
