@@ -124,10 +124,11 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
             return false;
         }
 
-        EnsureTitle(root);
-        EnsureEquipmentLayout(root);
-        EnsureSummaryCard(root);
-        EnsureActionButtons(root);
+        Transform equippedEquipmentArea = EnsureEquipmentAreas(root);
+        EnsureTitle(equippedEquipmentArea);
+        EnsureEquipmentLayout(equippedEquipmentArea);
+        EnsureSummaryCard(equippedEquipmentArea);
+        EnsureActionButtons(equippedEquipmentArea);
 
         return true;
     }
@@ -156,15 +157,76 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         }
 
         layoutGroup.padding = new RectOffset(8, 8, 6, 6);
-        layoutGroup.spacing = 12f;
+        layoutGroup.spacing = 10f;
+        layoutGroup.childAlignment = TextAnchor.UpperCenter;
+        layoutGroup.childControlWidth = true;
+        layoutGroup.childControlHeight = true;
+        layoutGroup.childForceExpandWidth = true;
+        layoutGroup.childForceExpandHeight = true;
+        rootObject.SetActive(isPanelVisible);
+
+        return rootObject.transform;
+    }
+
+    private Transform EnsureEquipmentAreas(Transform root)
+    {
+        Transform equippedEquipmentArea = EnsureEquippedEquipmentArea(root);
+        EnsureEquipmentFilterArea(root);
+        EnsureOwnedEquipmentArea(root);
+        return equippedEquipmentArea;
+    }
+
+    private Transform EnsureEquippedEquipmentArea(Transform root)
+    {
+        GameObject areaObject = EnsureAreaPanel(root, "EquippedEquipmentArea", new Color(0.06f, 0.08f, 0.12f, 0.92f), 4f);
+
+        VerticalLayoutGroup layoutGroup = areaObject.GetComponent<VerticalLayoutGroup>();
+        if (layoutGroup == null)
+        {
+            layoutGroup = areaObject.AddComponent<VerticalLayoutGroup>();
+        }
+
+        layoutGroup.padding = new RectOffset(10, 10, 8, 8);
+        layoutGroup.spacing = 6f;
         layoutGroup.childAlignment = TextAnchor.UpperCenter;
         layoutGroup.childControlWidth = true;
         layoutGroup.childControlHeight = true;
         layoutGroup.childForceExpandWidth = true;
         layoutGroup.childForceExpandHeight = false;
-        rootObject.SetActive(isPanelVisible);
 
-        return rootObject.transform;
+        return areaObject.transform;
+    }
+
+    private Transform EnsureEquipmentFilterArea(Transform root)
+    {
+        GameObject areaObject = EnsureAreaPanel(root, "EquipmentFilterArea", new Color(0.08f, 0.1f, 0.15f, 0.94f), 1f);
+        EnsurePlaceholderAreaText(areaObject.transform, "EquipmentFilterPlaceholderText", "\uC7A5\uBE44 \uD544\uD130 \uC601\uC5ED - 031N-2\uC5D0\uC11C \uAD6C\uD604 \uC608\uC815");
+        return areaObject.transform;
+    }
+
+    private Transform EnsureOwnedEquipmentArea(Transform root)
+    {
+        GameObject areaObject = EnsureAreaPanel(root, "OwnedEquipmentArea", new Color(0.07f, 0.09f, 0.13f, 0.94f), 5f);
+        EnsurePlaceholderAreaText(areaObject.transform, "OwnedEquipmentPlaceholderText", "\uBCF4\uC720 \uC7A5\uBE44 \uC601\uC5ED - 031N-3\uC5D0\uC11C \uAD6C\uD604 \uC608\uC815");
+        return areaObject.transform;
+    }
+
+    private GameObject EnsureAreaPanel(Transform parent, string objectName, Color color, float flexibleHeight)
+    {
+        GameObject areaObject = EnsurePanel(parent, objectName, color);
+        LayoutElement layoutElement = EnsureLayoutElement(areaObject);
+        layoutElement.minHeight = 0f;
+        layoutElement.preferredHeight = 0f;
+        layoutElement.flexibleWidth = 1f;
+        layoutElement.flexibleHeight = flexibleHeight;
+
+        return areaObject;
+    }
+
+    private void EnsurePlaceholderAreaText(Transform parent, string objectName, string textValue)
+    {
+        Text placeholderText = EnsureText(parent, objectName, textValue, 24, TextAnchor.MiddleCenter, 0f);
+        placeholderText.color = new Color(0.74f, 0.8f, 0.88f, 1f);
     }
 
     private GameObject GetExistingRootObject()
@@ -193,13 +255,18 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
     private void EnsureTitle(Transform parent)
     {
-        Text titleText = EnsureText(parent, "HeroEquipmentTitleText", "\uC601\uC6C5 \uC7A5\uBE44", 42, TextAnchor.MiddleCenter, 72f);
+        Text titleText = EnsureText(parent, "HeroEquipmentTitleText", "\uC601\uC6C5 \uC7A5\uBE44", 32, TextAnchor.MiddleCenter, 42f);
         titleText.color = new Color(0.93f, 0.96f, 1f, 1f);
     }
 
     private void EnsureEquipmentLayout(Transform parent)
     {
-        Transform row = EnsureHorizontalRow(parent, "HeroEquipmentSlotLayout", 520f);
+        Transform row = EnsureHorizontalRow(parent, "HeroEquipmentSlotLayout", 0f);
+        LayoutElement layoutElement = EnsureLayoutElement(row.gameObject);
+        layoutElement.minHeight = 0f;
+        layoutElement.preferredHeight = 0f;
+        layoutElement.flexibleHeight = 1f;
+
         EnsureSlotColumn(row, "OffensiveEquipmentSlots", "\uACF5\uACA9 \uC7A5\uBE44", OffensiveSlotNames);
         EnsureHeroPlaceholder(row);
         EnsureSlotColumn(row, "DefensiveEquipmentSlots", "\uBC29\uC5B4 \uC7A5\uBE44", DefensiveSlotNames);
@@ -212,7 +279,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         layoutElement.flexibleWidth = 1f;
         layoutElement.minWidth = 250f;
 
-        Text titleText = EnsureText(column, objectName + "Title", title, 28, TextAnchor.MiddleCenter, 42f);
+        Text titleText = EnsureText(column, objectName + "Title", title, 22, TextAnchor.MiddleCenter, 28f);
         titleText.color = new Color(0.77f, 0.86f, 1f, 1f);
 
         for (int i = 0; i < slotNames.Length; i++)
@@ -225,9 +292,9 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     {
         GameObject heroObject = EnsurePanel(parent, "HeroEquipmentHeroPlaceholder", new Color(0.08f, 0.11f, 0.16f, 0.92f));
         LayoutElement layoutElement = EnsureLayoutElement(heroObject);
-        layoutElement.minWidth = 250f;
-        layoutElement.preferredWidth = 280f;
-        layoutElement.minHeight = 500f;
+        layoutElement.minWidth = 180f;
+        layoutElement.preferredWidth = 220f;
+        layoutElement.minHeight = 0f;
         layoutElement.flexibleWidth = 1.15f;
 
         VerticalLayoutGroup heroLayoutGroup = heroObject.GetComponent<VerticalLayoutGroup>();
@@ -236,8 +303,8 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
             heroLayoutGroup = heroObject.AddComponent<VerticalLayoutGroup>();
         }
 
-        heroLayoutGroup.padding = new RectOffset(18, 18, 22, 18);
-        heroLayoutGroup.spacing = 14f;
+        heroLayoutGroup.padding = new RectOffset(12, 12, 10, 10);
+        heroLayoutGroup.spacing = 6f;
         heroLayoutGroup.childAlignment = TextAnchor.MiddleCenter;
         heroLayoutGroup.childControlWidth = true;
         heroLayoutGroup.childControlHeight = true;
@@ -245,18 +312,19 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         heroLayoutGroup.childForceExpandHeight = false;
 
         Transform heroTransform = heroObject.transform;
-        EnsureText(heroTransform, "HeroPlaceholderTitle", "Hero", 30, TextAnchor.MiddleCenter, 58f);
+        EnsureText(heroTransform, "HeroPlaceholderTitle", "Hero", 24, TextAnchor.MiddleCenter, 34f);
 
         GameObject iconObject = EnsurePanel(heroTransform, "HeroPlaceholderIcon", new Color(0.18f, 0.42f, 0.74f, 0.95f));
         LayoutElement iconLayoutElement = EnsureLayoutElement(iconObject);
-        iconLayoutElement.minHeight = 300f;
-        iconLayoutElement.preferredHeight = 330f;
+        iconLayoutElement.minHeight = 0f;
+        iconLayoutElement.preferredHeight = 0f;
         iconLayoutElement.flexibleWidth = 1f;
+        iconLayoutElement.flexibleHeight = 1f;
 
-        Text iconText = EnsureText(iconObject.transform, "HeroPlaceholderIconText", "\uC601\uC6C5", 34, TextAnchor.MiddleCenter, 0f);
+        Text iconText = EnsureText(iconObject.transform, "HeroPlaceholderIconText", "\uC601\uC6C5", 28, TextAnchor.MiddleCenter, 0f);
         iconText.color = Color.white;
 
-        Text captionText = EnsureText(heroTransform, "HeroPlaceholderCaption", "\uC7A5\uBE44 UI placeholder", 24, TextAnchor.MiddleCenter, 52f);
+        Text captionText = EnsureText(heroTransform, "HeroPlaceholderCaption", "\uC7A5\uBE44 UI placeholder", 18, TextAnchor.MiddleCenter, 30f);
         captionText.color = new Color(0.78f, 0.83f, 0.9f, 1f);
     }
 
@@ -264,8 +332,8 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     {
         GameObject buttonObject = EnsurePanel(parent, "EquipmentSlotButton_" + slotName, new Color(0.14f, 0.17f, 0.23f, 0.96f));
         LayoutElement layoutElement = EnsureLayoutElement(buttonObject);
-        layoutElement.minHeight = 92f;
-        layoutElement.preferredHeight = 96f;
+        layoutElement.minHeight = 40f;
+        layoutElement.preferredHeight = 46f;
         layoutElement.flexibleWidth = 1f;
 
         HorizontalLayoutGroup rowLayout = buttonObject.GetComponent<HorizontalLayoutGroup>();
@@ -274,8 +342,8 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
             rowLayout = buttonObject.AddComponent<HorizontalLayoutGroup>();
         }
 
-        rowLayout.padding = new RectOffset(12, 12, 10, 10);
-        rowLayout.spacing = 10f;
+        rowLayout.padding = new RectOffset(8, 8, 6, 6);
+        rowLayout.spacing = 8f;
         rowLayout.childAlignment = TextAnchor.MiddleCenter;
         rowLayout.childControlWidth = true;
         rowLayout.childControlHeight = true;
@@ -295,15 +363,15 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
         GameObject iconObject = EnsurePanel(buttonObject.transform, "IconPlaceholder", new Color(0.28f, 0.33f, 0.43f, 1f));
         LayoutElement iconLayout = EnsureLayoutElement(iconObject);
-        iconLayout.minWidth = 58f;
-        iconLayout.preferredWidth = 64f;
-        iconLayout.minHeight = 58f;
-        iconLayout.preferredHeight = 64f;
+        iconLayout.minWidth = 36f;
+        iconLayout.preferredWidth = 40f;
+        iconLayout.minHeight = 32f;
+        iconLayout.preferredHeight = 36f;
 
-        Text iconText = EnsureText(iconObject.transform, "IconText", "?", 34, TextAnchor.MiddleCenter, 0f);
+        Text iconText = EnsureText(iconObject.transform, "IconText", "?", 22, TextAnchor.MiddleCenter, 0f);
         iconText.color = new Color(0.9f, 0.94f, 1f, 1f);
 
-        Text slotText = EnsureText(buttonObject.transform, "SlotNameText", slotName, 28, TextAnchor.MiddleLeft, 0f);
+        Text slotText = EnsureText(buttonObject.transform, "SlotNameText", slotName, 22, TextAnchor.MiddleLeft, 0f);
         LayoutElement slotTextLayout = EnsureLayoutElement(slotText.gameObject);
         slotTextLayout.flexibleWidth = 1f;
     }
@@ -312,8 +380,8 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     {
         GameObject cardObject = EnsurePanel(parent, "SelectedEquipmentSummaryCard", new Color(0.08f, 0.1f, 0.14f, 0.96f));
         LayoutElement layoutElement = EnsureLayoutElement(cardObject);
-        layoutElement.minHeight = 190f;
-        layoutElement.preferredHeight = 210f;
+        layoutElement.minHeight = 76f;
+        layoutElement.preferredHeight = 84f;
         layoutElement.flexibleWidth = 1f;
 
         VerticalLayoutGroup layoutGroup = cardObject.GetComponent<VerticalLayoutGroup>();
@@ -322,22 +390,22 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
             layoutGroup = cardObject.AddComponent<VerticalLayoutGroup>();
         }
 
-        layoutGroup.padding = new RectOffset(22, 22, 16, 16);
-        layoutGroup.spacing = 8f;
+        layoutGroup.padding = new RectOffset(14, 14, 8, 8);
+        layoutGroup.spacing = 3f;
         layoutGroup.childAlignment = TextAnchor.UpperLeft;
         layoutGroup.childControlWidth = true;
         layoutGroup.childControlHeight = true;
         layoutGroup.childForceExpandWidth = true;
         layoutGroup.childForceExpandHeight = false;
 
-        selectedSlotText = EnsureText(cardObject.transform, "SelectedSlotSummaryText", string.Empty, 30, TextAnchor.MiddleLeft, 46f);
-        equipmentNameText = EnsureText(cardObject.transform, "EquipmentNameSummaryText", string.Empty, 28, TextAnchor.MiddleLeft, 42f);
-        effectText = EnsureText(cardObject.transform, "EquipmentEffectSummaryText", string.Empty, 26, TextAnchor.MiddleLeft, 52f);
+        selectedSlotText = EnsureText(cardObject.transform, "SelectedSlotSummaryText", string.Empty, 22, TextAnchor.MiddleLeft, 24f);
+        equipmentNameText = EnsureText(cardObject.transform, "EquipmentNameSummaryText", string.Empty, 20, TextAnchor.MiddleLeft, 22f);
+        effectText = EnsureText(cardObject.transform, "EquipmentEffectSummaryText", string.Empty, 20, TextAnchor.MiddleLeft, 24f);
     }
 
     private void EnsureActionButtons(Transform parent)
     {
-        Transform row = EnsureHorizontalRow(parent, "HeroEquipmentActionButtons", 88f);
+        Transform row = EnsureHorizontalRow(parent, "HeroEquipmentActionButtons", 54f);
         EnsureActionButton(row, "DetailPlaceholderButton", "\uC0C1\uC138\uBCF4\uAE30");
         EnsureActionButton(row, "ChangePlaceholderButton", "\uC7A5\uBE44 \uAD50\uCCB4");
         EnsureActionButton(row, "UnequipPlaceholderButton", "\uC7A5\uBE44 \uD574\uC81C");
@@ -347,8 +415,8 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     {
         GameObject buttonObject = EnsurePanel(parent, objectName, new Color(0.18f, 0.22f, 0.3f, 0.98f));
         LayoutElement layoutElement = EnsureLayoutElement(buttonObject);
-        layoutElement.minHeight = 76f;
-        layoutElement.preferredHeight = 86f;
+        layoutElement.minHeight = 44f;
+        layoutElement.preferredHeight = 52f;
         layoutElement.flexibleWidth = 1f;
 
         Button button = buttonObject.GetComponent<Button>();
@@ -361,7 +429,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(() => Debug.Log(label + " placeholder clicked."));
 
-        EnsureText(buttonObject.transform, "Text", label, 28, TextAnchor.MiddleCenter, 0f);
+        EnsureText(buttonObject.transform, "Text", label, 22, TextAnchor.MiddleCenter, 0f);
     }
 
     private Transform EnsureHorizontalRow(Transform parent, string objectName, float preferredHeight)
