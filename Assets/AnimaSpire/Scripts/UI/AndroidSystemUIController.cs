@@ -3,23 +3,32 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class AndroidSystemUIController : MonoBehaviour
 {
+    private enum SystemUIMode
+    {
+        NormalEdgeToEdge,
+        ImmersiveFullscreen
+    }
+
+    private SystemUIMode currentMode = SystemUIMode.NormalEdgeToEdge;
+
     private void Awake()
     {
-        ApplySystemUI();
+        currentMode = SystemUIMode.NormalEdgeToEdge;
+        ReapplyCurrentMode();
     }
 
     private void Start()
     {
-        ApplySystemUI();
-        Invoke(nameof(ApplySystemUI), 0.25f);
-        Invoke(nameof(ApplySystemUI), 1f);
+        ReapplyCurrentMode();
+        Invoke(nameof(ReapplyCurrentMode), 0.25f);
+        Invoke(nameof(ReapplyCurrentMode), 1f);
     }
 
     private void OnApplicationFocus(bool hasFocus)
     {
         if (hasFocus)
         {
-            ApplySystemUI();
+            ReapplyCurrentMode();
         }
     }
 
@@ -27,11 +36,28 @@ public sealed class AndroidSystemUIController : MonoBehaviour
     {
         if (!pauseStatus)
         {
-            ApplySystemUI();
+            ReapplyCurrentMode();
         }
     }
 
-    private void ApplySystemUI()
+    public void ApplyNormalEdgeToEdgeMode()
+    {
+        currentMode = SystemUIMode.NormalEdgeToEdge;
+        ApplySystemUI(SystemUIMode.NormalEdgeToEdge);
+    }
+
+    public void ApplyImmersiveFullscreenMode()
+    {
+        currentMode = SystemUIMode.ImmersiveFullscreen;
+        ApplySystemUI(SystemUIMode.ImmersiveFullscreen);
+    }
+
+    public void ReapplyCurrentMode()
+    {
+        ApplySystemUI(currentMode);
+    }
+
+    private void ApplySystemUI(SystemUIMode mode)
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         try
@@ -43,7 +69,7 @@ public sealed class AndroidSystemUIController : MonoBehaviour
                 return;
             }
 
-            activity.Call("runOnUiThread", new AndroidJavaRunnable(ApplySystemUIOnUiThread));
+            activity.Call("runOnUiThread", new AndroidJavaRunnable(() => ApplySystemUIOnUiThread(mode)));
         }
         catch (System.Exception exception)
         {
@@ -53,7 +79,7 @@ public sealed class AndroidSystemUIController : MonoBehaviour
     }
 
 #if UNITY_ANDROID && !UNITY_EDITOR
-    private static void ApplySystemUIOnUiThread()
+    private static void ApplySystemUIOnUiThread(SystemUIMode mode)
     {
         try
         {
@@ -67,12 +93,26 @@ public sealed class AndroidSystemUIController : MonoBehaviour
             const int flagTranslucentStatus = 0x04000000;
             const int systemUiFlagLayoutStable = 0x00000100;
             const int systemUiFlagLayoutFullscreen = 0x00000400;
+            const int systemUiFlagLayoutHideNavigation = 0x00000200;
+            const int systemUiFlagFullscreen = 0x00000004;
+            const int systemUiFlagHideNavigation = 0x00000002;
+            const int systemUiFlagImmersiveSticky = 0x00001000;
 
             window.Call("clearFlags", flagFullscreen);
             window.Call("clearFlags", flagTranslucentStatus);
             window.Call("addFlags", flagDrawsSystemBarBackgrounds);
-            decorView.Call("setSystemUiVisibility", systemUiFlagLayoutStable | systemUiFlagLayoutFullscreen);
             window.Call("setStatusBarColor", 0);
+
+            int visibility = mode == SystemUIMode.ImmersiveFullscreen
+                ? systemUiFlagLayoutStable
+                    | systemUiFlagLayoutFullscreen
+                    | systemUiFlagLayoutHideNavigation
+                    | systemUiFlagFullscreen
+                    | systemUiFlagHideNavigation
+                    | systemUiFlagImmersiveSticky
+                : systemUiFlagLayoutStable | systemUiFlagLayoutFullscreen;
+
+            decorView.Call("setSystemUiVisibility", visibility);
         }
         catch (System.Exception exception)
         {
