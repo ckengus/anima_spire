@@ -127,8 +127,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         Transform equippedEquipmentArea = EnsureEquipmentAreas(root);
         EnsureTitle(equippedEquipmentArea);
         EnsureEquipmentLayout(equippedEquipmentArea);
-        EnsureSummaryCard(equippedEquipmentArea);
-        EnsureActionButtons(equippedEquipmentArea);
+        HideLegacyEquippedDebugUi(equippedEquipmentArea);
 
         return true;
     }
@@ -178,7 +177,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
     private Transform EnsureEquippedEquipmentArea(Transform root)
     {
-        GameObject areaObject = EnsureAreaPanel(root, "EquippedEquipmentArea", new Color(0.06f, 0.08f, 0.12f, 0.92f), 4f);
+        GameObject areaObject = EnsureAreaPanel(root, "EquippedEquipmentArea", new Color(0.06f, 0.08f, 0.12f, 0.92f), 9f);
 
         VerticalLayoutGroup layoutGroup = areaObject.GetComponent<VerticalLayoutGroup>();
         if (layoutGroup == null)
@@ -206,9 +205,15 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
     private Transform EnsureOwnedEquipmentArea(Transform root)
     {
-        GameObject areaObject = EnsureAreaPanel(root, "OwnedEquipmentArea", new Color(0.07f, 0.09f, 0.13f, 0.94f), 5f);
+        GameObject areaObject = EnsureAreaPanel(root, "OwnedEquipmentArea", new Color(0.07f, 0.09f, 0.13f, 0.94f), 10f);
         EnsurePlaceholderAreaText(areaObject.transform, "OwnedEquipmentPlaceholderText", "\uBCF4\uC720 \uC7A5\uBE44 \uC601\uC5ED - 031N-3\uC5D0\uC11C \uAD6C\uD604 \uC608\uC815");
         return areaObject.transform;
+    }
+
+    private void HideLegacyEquippedDebugUi(Transform equippedEquipmentArea)
+    {
+        SetDirectChildActive(equippedEquipmentArea, "SelectedEquipmentSummaryCard", false);
+        SetDirectChildActive(equippedEquipmentArea, "HeroEquipmentActionButtons", false);
     }
 
     private GameObject EnsureAreaPanel(Transform parent, string objectName, Color color, float flexibleHeight)
@@ -785,6 +790,15 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         }
 
         return null;
+    }
+
+    private void SetDirectChildActive(Transform parent, string childName, bool isActive)
+    {
+        Transform child = GetDirectChild(parent, childName);
+        if (child != null)
+        {
+            child.gameObject.SetActive(isActive);
+        }
     }
 
     private void StretchToParent(RectTransform rectTransform)
