@@ -3,6 +3,8 @@ using UnityEngine.UI;
 
 public sealed class HeroEquipmentPanelUI : MonoBehaviour
 {
+    private Transform equipmentRootTarget;
+
     private static readonly string[] OffensiveSlotNames =
     {
         "\uBB34\uAE30",
@@ -22,17 +24,71 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
     private Text selectedSlotText;
     private Text equipmentNameText;
     private Text effectText;
+    private GameObject equipmentContentRoot;
     private string selectedSlotName;
+    private bool hasReceivedRootTarget;
+    private bool isPanelVisible;
 
     private void Awake()
     {
-        EnsureUi();
-        SelectSlot(OffensiveSlotNames[0]);
     }
 
     private void OnEnable()
     {
-        EnsureUi();
+        if (!hasReceivedRootTarget)
+        {
+            return;
+        }
+
+        if (isPanelVisible && EnsureUi() && string.IsNullOrEmpty(selectedSlotName))
+        {
+            SelectSlot(OffensiveSlotNames[0]);
+        }
+    }
+
+    public void SetEquipmentRootTarget(Transform target)
+    {
+        hasReceivedRootTarget = true;
+        equipmentRootTarget = target;
+        equipmentContentRoot = GetExistingRootObject();
+
+        if (equipmentContentRoot != null)
+        {
+            equipmentContentRoot.SetActive(isPanelVisible);
+        }
+    }
+
+    public void ShowPanel()
+    {
+        SetPanelVisible(true);
+    }
+
+    public void HidePanel()
+    {
+        SetPanelVisible(false);
+    }
+
+    public void SetPanelVisible(bool visible)
+    {
+        isPanelVisible = visible;
+
+        if (!visible)
+        {
+            equipmentContentRoot = GetExistingRootObject();
+            if (equipmentContentRoot != null)
+            {
+                equipmentContentRoot.SetActive(false);
+            }
+
+            return;
+        }
+
+        if (!EnsureUi())
+        {
+            return;
+        }
+
+        equipmentContentRoot.SetActive(true);
 
         if (string.IsNullOrEmpty(selectedSlotName))
         {
@@ -40,27 +96,38 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         }
     }
 
-    private void EnsureUi()
+    private bool EnsureUi()
     {
         Transform root = EnsureRoot();
+        if (root == null)
+        {
+            return false;
+        }
+
         EnsureTitle(root);
         EnsureEquipmentLayout(root);
         EnsureSummaryCard(root);
         EnsureActionButtons(root);
+
+        return true;
     }
 
     private Transform EnsureRoot()
     {
+        if (equipmentRootTarget == null)
+        {
+            Debug.LogError("HeroEquipmentPanelUI equipmentRootTarget is missing. Assign UI_OverlayCanvas > SafeAreaUIRoot > MainContentArea to MainTabController Equipment Root Target in the Inspector.");
+            return null;
+        }
+
         const string objectName = "HeroEquipmentContent";
-        Transform existing = transform.Find(objectName);
+        Transform existing = GetDirectChild(equipmentRootTarget, objectName);
         GameObject rootObject = existing != null ? existing.gameObject : new GameObject(objectName, typeof(RectTransform));
-        rootObject.transform.SetParent(transform, false);
+        rootObject.transform.SetParent(equipmentRootTarget, false);
+        equipmentContentRoot = rootObject;
 
         RectTransform rectTransform = rootObject.GetComponent<RectTransform>();
-        rectTransform.anchorMin = new Vector2(0.04f, 0.04f);
-        rectTransform.anchorMax = new Vector2(0.96f, 0.96f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
+        StretchToParent(rectTransform);
 
         VerticalLayoutGroup layoutGroup = rootObject.GetComponent<VerticalLayoutGroup>();
         if (layoutGroup == null)
@@ -75,8 +142,21 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         layoutGroup.childControlHeight = true;
         layoutGroup.childForceExpandWidth = true;
         layoutGroup.childForceExpandHeight = false;
+        rootObject.SetActive(isPanelVisible);
 
         return rootObject.transform;
+    }
+
+    private GameObject GetExistingRootObject()
+    {
+        if (equipmentRootTarget == null)
+        {
+            return null;
+        }
+
+        const string objectName = "HeroEquipmentContent";
+        Transform existing = GetDirectChild(equipmentRootTarget, objectName);
+        return existing != null ? existing.gameObject : null;
     }
 
     private void EnsureTitle(Transform parent)
@@ -296,7 +376,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
     private GameObject EnsureGroup(Transform parent, string objectName, bool horizontal)
     {
-        Transform existing = parent.Find(objectName);
+        Transform existing = GetDirectChild(parent, objectName);
         GameObject groupObject = existing != null ? existing.gameObject : new GameObject(objectName, typeof(RectTransform));
         groupObject.transform.SetParent(parent, false);
 
@@ -323,7 +403,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
     private GameObject EnsurePanel(Transform parent, string objectName, Color color)
     {
-        Transform existing = parent.Find(objectName);
+        Transform existing = GetDirectChild(parent, objectName);
         GameObject panelObject = existing != null
             ? existing.gameObject
             : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -344,7 +424,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
     private Text EnsureText(Transform parent, string objectName, string textValue, int fontSize, TextAnchor alignment, float preferredHeight)
     {
-        Transform existing = parent.Find(objectName);
+        Transform existing = GetDirectChild(parent, objectName);
         GameObject textObject = existing != null
             ? existing.gameObject
             : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
@@ -375,6 +455,32 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         text.text = textValue;
 
         return text;
+    }
+
+    private Transform GetDirectChild(Transform parent, string childName)
+    {
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.name == childName)
+            {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    private void StretchToParent(RectTransform rectTransform)
+    {
+        rectTransform.localScale = Vector3.one;
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = Vector2.zero;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
     }
 
     private LayoutElement EnsureLayoutElement(GameObject target)
