@@ -25,6 +25,7 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private GameObject tabContentPanel;
     [SerializeField] private GameObject equipmentPanel;
     [SerializeField] private GameObject laboratoryPanel;
+    [SerializeField] private GameObject equipmentSynthesisPanel;
     [SerializeField] private Transform equipmentRootTarget;
     [SerializeField] private EquipmentManager equipmentManager;
     [SerializeField] private ProgressSaveManager progressSaveManager;
@@ -33,6 +34,7 @@ public class MainTabController : MonoBehaviour
     private RectTransform equipmentPanelRectTransform;
     private HeroEquipmentPanelUI equipmentPanelController;
     private LaboratoryPanelUI laboratoryPanelController;
+    private EquipmentSynthesisPanelUI equipmentSynthesisPanelController;
 
     private void Awake()
     {
@@ -46,6 +48,7 @@ public class MainTabController : MonoBehaviour
         EnsureEquipmentPanel();
         EnsureBottomMenuButtons();
         EnsureLaboratoryPanel();
+        EnsureEquipmentSynthesisPanel();
         ShowBattle();
     }
 
@@ -63,6 +66,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
+        equipmentSynthesisPanelController?.HidePanel();
         SetBottomMenuAsLastSibling();
     }
 
@@ -78,6 +82,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(tabContentPanel, true);
         SetActiveIfPresent(equipmentPanel, true);
         laboratoryPanelController?.HidePanel();
+        equipmentSynthesisPanelController?.HidePanel();
         equipmentPanelController?.ShowPanel();
         SetBottomMenuAsLastSibling();
     }
@@ -89,9 +94,24 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
+        equipmentSynthesisPanelController?.HidePanel();
 
         EnsureLaboratoryPanel();
         laboratoryPanelController?.ShowPanel();
+        SetBottomMenuAsLastSibling();
+    }
+
+    public void ShowSynthesisRoom()
+    {
+        SetActiveIfPresent(combatPanel, true);
+        SetActiveIfPresent(infoPanel, true);
+        SetActiveIfPresent(tabContentPanel, false);
+        SetActiveIfPresent(equipmentPanel, false);
+        equipmentPanelController?.HidePanel();
+        laboratoryPanelController?.HidePanel();
+
+        EnsureEquipmentSynthesisPanel();
+        equipmentSynthesisPanelController?.ShowPanel();
         SetBottomMenuAsLastSibling();
     }
 
@@ -888,9 +908,48 @@ public class MainTabController : MonoBehaviour
             controller = laboratoryPanel.AddComponent<LaboratoryPanelUI>();
         }
 
-        controller.SetCallbacks(ShowWardrobe, () => Debug.Log("Laboratory synthesis room clicked."));
+        controller.SetCallbacks(ShowWardrobe, ShowSynthesisRoom);
         laboratoryPanelController = controller;
         laboratoryPanelController.HidePanel();
+    }
+
+    private void EnsureEquipmentSynthesisPanel()
+    {
+        Transform mainContentArea = FindSceneDescendantByName("MainContentArea");
+        if (mainContentArea == null)
+        {
+            Transform safeAreaRoot = FindSceneDescendantByName("SafeAreaRoot");
+            GameObject mainContentObject = new GameObject("MainContentArea", typeof(RectTransform));
+            mainContentObject.transform.SetParent(safeAreaRoot != null ? safeAreaRoot : transform, false);
+            ApplyAnchors(mainContentObject, Vector2.zero, Vector2.one);
+            mainContentArea = mainContentObject.transform;
+        }
+
+        if (equipmentSynthesisPanel == null)
+        {
+            Transform existing = mainContentArea.Find("EquipmentSynthesisPanel");
+            equipmentSynthesisPanel = existing != null
+                ? existing.gameObject
+                : new GameObject("EquipmentSynthesisPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        }
+
+        equipmentSynthesisPanel.transform.SetParent(mainContentArea, false);
+        StretchToParent(equipmentSynthesisPanel.GetComponent<RectTransform>());
+
+        Image image = equipmentSynthesisPanel.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = new Color(0.06f, 0.075f, 0.1f, 0.98f);
+            image.raycastTarget = true;
+        }
+
+        if (!equipmentSynthesisPanel.TryGetComponent(out EquipmentSynthesisPanelUI controller))
+        {
+            controller = equipmentSynthesisPanel.AddComponent<EquipmentSynthesisPanelUI>();
+        }
+
+        equipmentSynthesisPanelController = controller;
+        equipmentSynthesisPanelController.HidePanel();
     }
 
     private void StretchToParent(RectTransform rectTransform)
