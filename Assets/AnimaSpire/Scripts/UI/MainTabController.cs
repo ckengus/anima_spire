@@ -68,10 +68,16 @@ public class MainTabController : MonoBehaviour
 
     public void ShowEquipment()
     {
+        ShowWardrobe();
+    }
+
+    public void ShowWardrobe()
+    {
         SetActiveIfPresent(combatPanel, true);
         SetActiveIfPresent(infoPanel, true);
         SetActiveIfPresent(tabContentPanel, true);
         SetActiveIfPresent(equipmentPanel, true);
+        laboratoryPanelController?.HidePanel();
         equipmentPanelController?.ShowPanel();
         SetBottomMenuAsLastSibling();
     }
@@ -882,6 +888,7 @@ public class MainTabController : MonoBehaviour
             controller = laboratoryPanel.AddComponent<LaboratoryPanelUI>();
         }
 
+        controller.SetCallbacks(ShowWardrobe, () => Debug.Log("Laboratory synthesis room clicked."));
         laboratoryPanelController = controller;
         laboratoryPanelController.HidePanel();
     }
