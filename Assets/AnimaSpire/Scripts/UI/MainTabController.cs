@@ -24,6 +24,7 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private GameObject bottomGlobalTabArea;
     [SerializeField] private GameObject tabContentPanel;
     [SerializeField] private GameObject equipmentPanel;
+    [SerializeField] private GameObject laboratoryPanel;
     [SerializeField] private Transform equipmentRootTarget;
     [SerializeField] private EquipmentManager equipmentManager;
     [SerializeField] private ProgressSaveManager progressSaveManager;
@@ -31,6 +32,7 @@ public class MainTabController : MonoBehaviour
     private RectTransform combatHudRectTransform;
     private RectTransform equipmentPanelRectTransform;
     private HeroEquipmentPanelUI equipmentPanelController;
+    private LaboratoryPanelUI laboratoryPanelController;
 
     private void Awake()
     {
@@ -43,6 +45,7 @@ public class MainTabController : MonoBehaviour
         EnsureTabContentPanel();
         EnsureEquipmentPanel();
         EnsureBottomMenuButtons();
+        EnsureLaboratoryPanel();
         ShowBattle();
     }
 
@@ -59,6 +62,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
+        laboratoryPanelController?.HidePanel();
         SetBottomMenuAsLastSibling();
     }
 
@@ -69,6 +73,19 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(tabContentPanel, true);
         SetActiveIfPresent(equipmentPanel, true);
         equipmentPanelController?.ShowPanel();
+        SetBottomMenuAsLastSibling();
+    }
+
+    public void ShowLaboratory()
+    {
+        SetActiveIfPresent(combatPanel, true);
+        SetActiveIfPresent(infoPanel, true);
+        SetActiveIfPresent(tabContentPanel, false);
+        SetActiveIfPresent(equipmentPanel, false);
+        equipmentPanelController?.HidePanel();
+
+        EnsureLaboratoryPanel();
+        laboratoryPanelController?.ShowPanel();
         SetBottomMenuAsLastSibling();
     }
 
@@ -420,7 +437,7 @@ public class MainTabController : MonoBehaviour
         EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_01");
         EnsureGlobalTabCard(iconRow, "GlobalTabCard_Hero", "Label_Hero", "\uC601\uC6C5", new Color(0.2f, 0.23f, 0.3f, 0.96f), ShowHeroTabPlaceholder);
         EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_02");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Laboratory", "Label_Laboratory", "\uC5F0\uAD6C\uC2E4", new Color(0.18f, 0.36f, 0.68f, 0.96f), ShowLaboratoryTabPlaceholder);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Laboratory", "Label_Laboratory", "\uC5F0\uAD6C\uC2E4", new Color(0.18f, 0.36f, 0.68f, 0.96f), ShowLaboratory);
         EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_03");
         EnsureGlobalTabCard(iconRow, "GlobalTabCard_Guild", "Label_Guild", "\uD559\uD68C", new Color(0.22f, 0.25f, 0.32f, 0.96f), ShowGuildTabPlaceholder);
         EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_04");
@@ -828,6 +845,60 @@ public class MainTabController : MonoBehaviour
         controller.SetEquipmentManager(equipmentManager);
         equipmentPanelController = controller;
         equipmentPanelController.HidePanel();
+    }
+
+    private void EnsureLaboratoryPanel()
+    {
+        Transform mainContentArea = FindSceneDescendantByName("MainContentArea");
+        if (mainContentArea == null)
+        {
+            Transform safeAreaRoot = FindSceneDescendantByName("SafeAreaRoot");
+            GameObject mainContentObject = new GameObject("MainContentArea", typeof(RectTransform));
+            mainContentObject.transform.SetParent(safeAreaRoot != null ? safeAreaRoot : transform, false);
+            ApplyAnchors(mainContentObject, Vector2.zero, Vector2.one);
+            mainContentArea = mainContentObject.transform;
+        }
+
+        if (laboratoryPanel == null)
+        {
+            Transform existing = mainContentArea.Find("LaboratoryPanel");
+            laboratoryPanel = existing != null
+                ? existing.gameObject
+                : new GameObject("LaboratoryPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        }
+
+        laboratoryPanel.transform.SetParent(mainContentArea, false);
+        StretchToParent(laboratoryPanel.GetComponent<RectTransform>());
+
+        Image image = laboratoryPanel.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = new Color(0.06f, 0.075f, 0.1f, 0.98f);
+            image.raycastTarget = true;
+        }
+
+        if (!laboratoryPanel.TryGetComponent(out LaboratoryPanelUI controller))
+        {
+            controller = laboratoryPanel.AddComponent<LaboratoryPanelUI>();
+        }
+
+        laboratoryPanelController = controller;
+        laboratoryPanelController.HidePanel();
+    }
+
+    private void StretchToParent(RectTransform rectTransform)
+    {
+        if (rectTransform == null)
+        {
+            return;
+        }
+
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = Vector2.zero;
     }
 
     private void SetBottomMenuAsLastSibling()
