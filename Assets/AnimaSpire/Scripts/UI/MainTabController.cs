@@ -199,6 +199,51 @@ public class MainTabController : MonoBehaviour
         return null;
     }
 
+    private Transform FindSafeAreaRoot()
+    {
+        Transform safeAreaRoot = FindSceneDescendantByName("SafeAreaUIRoot");
+        if (safeAreaRoot == null)
+        {
+            safeAreaRoot = FindSceneDescendantByName("SafeAreaRoot");
+        }
+
+        return safeAreaRoot;
+    }
+
+    private Transform FindTabContentParent()
+    {
+        Transform mainContentArea = FindSceneDescendantByName("MainContentArea");
+        if (mainContentArea != null)
+        {
+            return mainContentArea;
+        }
+
+        Transform safeAreaRoot = FindSafeAreaRoot();
+        if (safeAreaRoot != null)
+        {
+            return safeAreaRoot;
+        }
+
+        Transform overlayCanvas = FindSceneDescendantByName("UI_OverlayCanvas");
+        return overlayCanvas != null ? overlayCanvas : transform;
+    }
+
+    private Transform EnsureMainContentArea()
+    {
+        Transform mainContentArea = FindSceneDescendantByName("MainContentArea");
+        if (mainContentArea != null)
+        {
+            return mainContentArea;
+        }
+
+        Transform safeAreaRoot = FindSafeAreaRoot();
+        GameObject mainContentObject = new GameObject("MainContentArea", typeof(RectTransform));
+        mainContentObject.transform.SetParent(safeAreaRoot != null ? safeAreaRoot : transform, false);
+        ApplyAnchors(mainContentObject, Vector2.zero, Vector2.one);
+
+        return mainContentObject.transform;
+    }
+
     private void EnsureThreeAreaLayout()
     {
         float middleMin = BottomMenuRatio;
@@ -394,7 +439,10 @@ public class MainTabController : MonoBehaviour
         }
 
         float topInsetPixels = Mathf.Max(0f, Screen.height - Screen.safeArea.yMax);
-        RectTransform canvasRect = transform as RectTransform;
+        Transform overlayCanvas = FindSceneDescendantByName("UI_OverlayCanvas");
+        RectTransform canvasRect = overlayCanvas != null
+            ? overlayCanvas as RectTransform
+            : null;
         float canvasHeight = canvasRect != null && canvasRect.rect.height > 0f
             ? canvasRect.rect.height
             : Screen.height;
@@ -448,12 +496,7 @@ public class MainTabController : MonoBehaviour
         if (bottomGlobalTabArea == null)
         {
             bottomGlobalTabArea = new GameObject("BottomGlobalTabArea", typeof(RectTransform)).gameObject;
-            Transform parent = FindSceneDescendantByName("SafeAreaUIRoot");
-            if (parent == null)
-            {
-                parent = FindSceneDescendantByName("SafeAreaRoot");
-            }
-
+            Transform parent = FindSafeAreaRoot();
             bottomGlobalTabArea.transform.SetParent(parent != null ? parent : transform, false);
             ApplyAnchors(bottomGlobalTabArea, Vector2.zero, new Vector2(1f, BottomMenuRatio));
         }
@@ -776,7 +819,11 @@ public class MainTabController : MonoBehaviour
         if (tabContentPanel == null)
         {
             tabContentPanel = new GameObject("TabContentPanel", typeof(RectTransform));
-            tabContentPanel.transform.SetParent(transform, false);
+            tabContentPanel.transform.SetParent(FindTabContentParent(), false);
+        }
+        else if (tabContentPanel.transform.parent == transform)
+        {
+            tabContentPanel.transform.SetParent(FindTabContentParent(), false);
         }
 
         ApplyAnchors(tabContentPanel, new Vector2(0f, BottomMenuRatio), Vector2.one);
@@ -880,15 +927,7 @@ public class MainTabController : MonoBehaviour
 
     private void EnsureLaboratoryPanel()
     {
-        Transform mainContentArea = FindSceneDescendantByName("MainContentArea");
-        if (mainContentArea == null)
-        {
-            Transform safeAreaRoot = FindSceneDescendantByName("SafeAreaRoot");
-            GameObject mainContentObject = new GameObject("MainContentArea", typeof(RectTransform));
-            mainContentObject.transform.SetParent(safeAreaRoot != null ? safeAreaRoot : transform, false);
-            ApplyAnchors(mainContentObject, Vector2.zero, Vector2.one);
-            mainContentArea = mainContentObject.transform;
-        }
+        Transform mainContentArea = EnsureMainContentArea();
 
         if (laboratoryPanel == null)
         {
@@ -920,15 +959,7 @@ public class MainTabController : MonoBehaviour
 
     private void EnsureEquipmentSynthesisPanel()
     {
-        Transform mainContentArea = FindSceneDescendantByName("MainContentArea");
-        if (mainContentArea == null)
-        {
-            Transform safeAreaRoot = FindSceneDescendantByName("SafeAreaRoot");
-            GameObject mainContentObject = new GameObject("MainContentArea", typeof(RectTransform));
-            mainContentObject.transform.SetParent(safeAreaRoot != null ? safeAreaRoot : transform, false);
-            ApplyAnchors(mainContentObject, Vector2.zero, Vector2.one);
-            mainContentArea = mainContentObject.transform;
-        }
+        Transform mainContentArea = EnsureMainContentArea();
 
         if (equipmentSynthesisPanel == null)
         {
