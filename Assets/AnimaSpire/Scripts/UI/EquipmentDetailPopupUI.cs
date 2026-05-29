@@ -9,6 +9,7 @@ public sealed class EquipmentDetailPopupUI : MonoBehaviour
     private Text categoryText;
     private Text tierText;
     private Text ownedStateText;
+    private Text equipStateText;
     private Text tierCountText;
     private Text baseStatText;
     private Text descriptionText;
@@ -218,6 +219,7 @@ public sealed class EquipmentDetailPopupUI : MonoBehaviour
         categoryText = EnsureInfoText(contentObject.transform, "CategoryText");
         tierText = EnsureInfoText(contentObject.transform, "TierText");
         ownedStateText = EnsureInfoText(contentObject.transform, "OwnedStateText");
+        equipStateText = EnsureInfoText(contentObject.transform, "EquipStateText");
         tierCountText = EnsureInfoText(contentObject.transform, "TierCountText");
         baseStatText = EnsureInfoText(contentObject.transform, "BaseStatText");
         descriptionText = EnsureInfoText(contentObject.transform, "DescriptionText");
@@ -271,6 +273,7 @@ public sealed class EquipmentDetailPopupUI : MonoBehaviour
             categoryText.text = "\uCE74\uD14C\uACE0\uB9AC: -";
             tierText.text = "\uB300\uD45C \uD2F0\uC5B4: -";
             ownedStateText.text = "\uD68D\uB4DD \uC0C1\uD0DC: -";
+            equipStateText.text = "\uCC29\uC6A9 \uC0C1\uD0DC: -";
             tierCountText.text = "\uD2F0\uC5B4\uBCC4 \uBCF4\uC720 \uC218\uB7C9: \uBCF4\uC720 \uC218\uB7C9 \uC5C6\uC74C";
             baseStatText.text = "\uAE30\uBCF8 \uC2A4\uD0EF: \uD6C4\uC18D \uAD6C\uD604 \uC608\uC815";
             descriptionText.text = "\uC124\uBA85: -";
@@ -283,6 +286,10 @@ public sealed class EquipmentDetailPopupUI : MonoBehaviour
         categoryText.text = "\uCE74\uD14C\uACE0\uB9AC: " + definition.category;
         tierText.text = "\uB300\uD45C \uD2F0\uC5B4: " + definition.tier;
         ownedStateText.text = "\uD68D\uB4DD \uC0C1\uD0DC: " + (isOwned ? "\uD68D\uB4DD" : "\uBBF8\uD68D\uB4DD");
+        equipStateText.text = "\uCC29\uC6A9 \uC0C1\uD0DC: " + BuildEquipStateText(definition, isOwned, isEquipped, canEquip, canUnequip);
+        equipStateText.color = isEquipped
+            ? new Color(1f, 0.9f, 0.52f, 1f)
+            : new Color(0.84f, 0.89f, 0.96f, 1f);
         tierCountText.text = "\uD2F0\uC5B4\uBCC4 \uBCF4\uC720 \uC218\uB7C9: " + BuildTierCountSummary(tierCounts);
         baseStatText.text = "\uAE30\uBCF8 \uC2A4\uD0EF: \uACF5\uACA9\uB825 +" + definition.bonusAttackPower + " / \uC2A4\uD0AC \uD53C\uD574 +" + definition.bonusSkillDamage;
         descriptionText.text = "\uC124\uBA85: " + (string.IsNullOrEmpty(definition.description) ? "-" : definition.description);
@@ -301,7 +308,7 @@ public sealed class EquipmentDetailPopupUI : MonoBehaviour
         }
         else
         {
-            button.onClick.AddListener(() => Debug.Log("031S-2\uC5D0\uC11C \uAD6C\uD604 \uC608\uC815"));
+            button.onClick.AddListener(() => Debug.Log("\uD604\uC7AC \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uB294 \uBC84\uD2BC\uC785\uB2C8\uB2E4."));
         }
 
         Image image = button.targetGraphic as Image;
@@ -309,8 +316,47 @@ public sealed class EquipmentDetailPopupUI : MonoBehaviour
         {
             image.color = interactable
                 ? new Color(0.25f, 0.48f, 0.84f, 0.98f)
-                : new Color(0.16f, 0.18f, 0.23f, 0.98f);
+                : new Color(0.09f, 0.1f, 0.13f, 0.98f);
         }
+
+        Transform textTransform = GetDirectChild(button.transform, "Text");
+        Text buttonText = textTransform != null ? textTransform.GetComponent<Text>() : null;
+        if (buttonText != null)
+        {
+            buttonText.color = interactable
+                ? Color.white
+                : new Color(0.48f, 0.52f, 0.58f, 1f);
+        }
+    }
+
+    private string BuildEquipStateText(EquipmentDefinition definition, bool isOwned, bool isEquipped, bool canEquip, bool canUnequip)
+    {
+        if (!isOwned)
+        {
+            return "\uBBF8\uD68D\uB4DD \uC7A5\uBE44";
+        }
+
+        if (isEquipped)
+        {
+            return "\uD604\uC7AC \uCC29\uC6A9 \uC911";
+        }
+
+        if (definition != null && definition.category != EquipmentCategory.Weapon)
+        {
+            return "\uD604\uC7AC MVP\uC5D0\uC11C\uB294 Weapon \uC7A5\uBE44\uB9CC \uCC29\uC6A9 \uAC00\uB2A5";
+        }
+
+        if (canEquip)
+        {
+            return "\uBBF8\uCC29\uC6A9 - \uCC29\uC6A9 \uAC00\uB2A5";
+        }
+
+        if (canUnequip)
+        {
+            return "\uD604\uC7AC \uCC29\uC6A9 \uC911";
+        }
+
+        return "\uBBF8\uCC29\uC6A9";
     }
 
     private string BuildTierCountSummary(Dictionary<EquipmentTier, int> tierCounts)
