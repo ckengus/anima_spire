@@ -54,7 +54,7 @@ public class MainTabController : MonoBehaviour
 
     private void OnRectTransformDimensionsChange()
     {
-        ApplyHudSafeAreaOffset();
+        ApplyHudAnchorLayout();
         ApplyTabContentSafeAreaOffset();
     }
 
@@ -336,7 +336,7 @@ public class MainTabController : MonoBehaviour
 
         EnsureStatusHudCard(hudObject.transform);
         EnsureDebugResetButton(hudObject.transform);
-        ApplyHudSafeAreaOffset();
+        ApplyHudAnchorLayout();
     }
 
     private void EnsureStatusHudCard(Transform hudTransform)
@@ -428,18 +428,15 @@ public class MainTabController : MonoBehaviour
         controller.Initialize(button, text, progressSaveManager);
     }
 
-    private void ApplyHudSafeAreaOffset()
+    private void ApplyHudAnchorLayout()
     {
         if (combatHudRectTransform == null)
         {
             return;
         }
 
-        float topInset = GetSafeAreaTopInsetInCanvasUnits();
-        float topPadding = Mathf.Max(HudSafeAreaPadding, topInset + HudSafeAreaPadding);
-
-        combatHudRectTransform.offsetMin = new Vector2(HudHorizontalPadding, -topPadding - HudHeight);
-        combatHudRectTransform.offsetMax = new Vector2(-HudHorizontalPadding, -topPadding);
+        combatHudRectTransform.offsetMin = new Vector2(HudHorizontalPadding, -HudSafeAreaPadding - HudHeight);
+        combatHudRectTransform.offsetMax = new Vector2(-HudHorizontalPadding, -HudSafeAreaPadding);
     }
 
     private float GetSafeAreaTopInsetInCanvasUnits()
