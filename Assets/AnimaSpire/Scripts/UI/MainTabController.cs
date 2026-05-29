@@ -210,6 +210,17 @@ public class MainTabController : MonoBehaviour
         return safeAreaRoot;
     }
 
+    private Transform FindFullScreenForegroundOverlay()
+    {
+        Transform foregroundOverlay = FindSceneDescendantByName("FullScreenForegroundOverlay");
+        if (foregroundOverlay == null)
+        {
+            foregroundOverlay = FindSceneDescendantByName("FullScreenPopupOverlay");
+        }
+
+        return foregroundOverlay;
+    }
+
     private Transform FindTabContentParent()
     {
         Transform mainContentArea = FindSceneDescendantByName("MainContentArea");
@@ -1023,13 +1034,9 @@ public class MainTabController : MonoBehaviour
         if (bottomGlobalTabArea != null)
         {
             bottomGlobalTabArea.transform.SetAsLastSibling();
-            Transform popupOverlay = bottomGlobalTabArea.transform.parent != null
-                ? bottomGlobalTabArea.transform.parent.Find("PopupOverlay")
-                : null;
-            popupOverlay?.SetAsLastSibling();
 
-            Transform fullScreenPopupOverlay = FindSceneDescendantByName("FullScreenPopupOverlay");
-            fullScreenPopupOverlay?.SetAsLastSibling();
+            Transform fullScreenForegroundOverlay = FindFullScreenForegroundOverlay();
+            fullScreenForegroundOverlay?.SetAsLastSibling();
             return;
         }
 
@@ -1037,6 +1044,9 @@ public class MainTabController : MonoBehaviour
         {
             bottomMenuPanel.transform.SetAsLastSibling();
         }
+
+        Transform fallbackForegroundOverlay = FindFullScreenForegroundOverlay();
+        fallbackForegroundOverlay?.SetAsLastSibling();
     }
 
     private void SetActiveIfPresent(GameObject target, bool isActive)
