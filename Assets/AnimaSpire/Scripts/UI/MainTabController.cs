@@ -448,7 +448,12 @@ public class MainTabController : MonoBehaviour
         if (bottomGlobalTabArea == null)
         {
             bottomGlobalTabArea = new GameObject("BottomGlobalTabArea", typeof(RectTransform)).gameObject;
-            Transform parent = FindSceneDescendantByName("SafeAreaRoot");
+            Transform parent = FindSceneDescendantByName("SafeAreaUIRoot");
+            if (parent == null)
+            {
+                parent = FindSceneDescendantByName("SafeAreaRoot");
+            }
+
             bottomGlobalTabArea.transform.SetParent(parent != null ? parent : transform, false);
             ApplyAnchors(bottomGlobalTabArea, Vector2.zero, new Vector2(1f, BottomMenuRatio));
         }
@@ -987,6 +992,13 @@ public class MainTabController : MonoBehaviour
         if (bottomGlobalTabArea != null)
         {
             bottomGlobalTabArea.transform.SetAsLastSibling();
+            Transform popupOverlay = bottomGlobalTabArea.transform.parent != null
+                ? bottomGlobalTabArea.transform.parent.Find("PopupOverlay")
+                : null;
+            popupOverlay?.SetAsLastSibling();
+
+            Transform fullScreenPopupOverlay = FindSceneDescendantByName("FullScreenPopupOverlay");
+            fullScreenPopupOverlay?.SetAsLastSibling();
             return;
         }
 
