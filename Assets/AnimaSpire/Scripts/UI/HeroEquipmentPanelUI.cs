@@ -635,9 +635,12 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         bool isOwned,
         Dictionary<EquipmentTier, int> tierCounts)
     {
-        Color cardColor = isOwned
-            ? new Color(0.14f, 0.19f, 0.27f, 0.98f)
-            : new Color(0.06f, 0.07f, 0.09f, 0.98f);
+        bool isEquipped = IsDefinitionEquipped(definition);
+        Color cardColor = isEquipped
+            ? new Color(0.21f, 0.25f, 0.15f, 0.98f)
+            : isOwned
+                ? new Color(0.14f, 0.19f, 0.27f, 0.98f)
+                : new Color(0.06f, 0.07f, 0.09f, 0.98f);
         GameObject cardObject = EnsurePanel(parent, "EquipmentCodexCard_" + index.ToString("000"), cardColor);
 
         Button button = cardObject.GetComponent<Button>();
@@ -664,9 +667,11 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         layoutGroup.childForceExpandWidth = true;
         layoutGroup.childForceExpandHeight = false;
 
-        Color iconColor = isOwned
-            ? new Color(0.24f, 0.32f, 0.46f, 1f)
-            : new Color(0.1f, 0.12f, 0.16f, 1f);
+        Color iconColor = isEquipped
+            ? new Color(0.48f, 0.4f, 0.16f, 1f)
+            : isOwned
+                ? new Color(0.24f, 0.32f, 0.46f, 1f)
+                : new Color(0.1f, 0.12f, 0.16f, 1f);
         GameObject iconObject = EnsurePanel(cardObject.transform, "IconPlaceholder", iconColor);
         LayoutElement iconLayout = EnsureLayoutElement(iconObject);
         iconLayout.minHeight = 58f;
@@ -691,9 +696,23 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
             ? new Color(0.76f, 0.82f, 0.9f, 1f)
             : new Color(0.38f, 0.42f, 0.48f, 1f);
 
-        bool isEquipped = IsDefinitionEquipped(definition);
-        Text equippedText = EnsureText(cardObject.transform, "EquippedText", isEquipped ? "\uCC29\uC6A9 \uC911" : string.Empty, 16, TextAnchor.MiddleCenter, 20f);
-        equippedText.color = new Color(1f, 0.88f, 0.48f, 1f);
+        EnsureEquippedBadge(cardObject.transform, isEquipped);
+    }
+
+    private void EnsureEquippedBadge(Transform parent, bool isEquipped)
+    {
+        GameObject badgeObject = EnsurePanel(parent, "EquippedBadge", isEquipped
+            ? new Color(0.48f, 0.34f, 0.08f, 0.98f)
+            : new Color(0f, 0f, 0f, 0f));
+        LayoutElement badgeLayout = EnsureLayoutElement(badgeObject);
+        badgeLayout.minHeight = 20f;
+        badgeLayout.preferredHeight = 22f;
+        badgeLayout.flexibleWidth = 1f;
+
+        Text badgeText = EnsureText(badgeObject.transform, "EquippedBadgeText", isEquipped ? "\uD604\uC7AC \uCC29\uC6A9 \uC911" : string.Empty, 16, TextAnchor.MiddleCenter, 0f);
+        badgeText.color = isEquipped
+            ? new Color(1f, 0.93f, 0.62f, 1f)
+            : new Color(1f, 1f, 1f, 0f);
     }
 
     private void ShowEquipmentDetailPopup(EquipmentDefinition definition, Dictionary<EquipmentTier, int> tierCounts, bool isOwned)
@@ -956,7 +975,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
     private void EnsureSlotButton(Transform parent, string slotName)
     {
-        GameObject buttonObject = EnsurePanel(parent, "EquipmentSlotButton_" + slotName, new Color(0.14f, 0.17f, 0.23f, 0.96f));
+        GameObject buttonObject = EnsurePanel(parent, "EquipmentSlotButton_" + slotName, GetSlotBackgroundColor(slotName));
         LayoutElement layoutElement = EnsureLayoutElement(buttonObject);
         layoutElement.minHeight = 40f;
         layoutElement.preferredHeight = 46f;
@@ -987,7 +1006,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(() => SelectSlot(slotName));
 
-        GameObject iconObject = EnsurePanel(buttonObject.transform, "IconPlaceholder", new Color(0.28f, 0.33f, 0.43f, 1f));
+        GameObject iconObject = EnsurePanel(buttonObject.transform, "IconPlaceholder", GetSlotIconColor(slotName));
         LayoutElement iconLayout = EnsureLayoutElement(iconObject);
         iconLayout.minWidth = 36f;
         iconLayout.preferredWidth = 40f;
@@ -1000,6 +1019,16 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         Text slotText = EnsureText(buttonObject.transform, "SlotNameText", GetSlotDisplayText(slotName), 22, TextAnchor.MiddleLeft, 0f);
         LayoutElement slotTextLayout = EnsureLayoutElement(slotText.gameObject);
         slotTextLayout.flexibleWidth = 1f;
+
+        if (IsWeaponSlot(slotName))
+        {
+            Text statusText = EnsureText(buttonObject.transform, "WeaponSlotStatusText", GetWeaponSlotStatusText(), 16, TextAnchor.MiddleCenter, 0f);
+            LayoutElement statusLayout = EnsureLayoutElement(statusText.gameObject);
+            statusLayout.minWidth = 64f;
+            statusLayout.preferredWidth = 72f;
+            statusLayout.flexibleWidth = 0f;
+            statusText.color = GetWeaponSlotStatusTextColor();
+        }
     }
 
     private string GetSlotDisplayText(string slotName)
@@ -1022,6 +1051,43 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         return slotName + "\n" + definition.displayName + " " + key.tier;
     }
 
+    private bool HasEquippedWeapon()
+    {
+        return equipmentManager != null && equipmentManager.TryGetEquippedMagicBook(out EquipmentStackKey _);
+    }
+
+    private Color GetSlotBackgroundColor(string slotName)
+    {
+        if (IsWeaponSlot(slotName) && HasEquippedWeapon())
+        {
+            return new Color(0.2f, 0.22f, 0.14f, 0.96f);
+        }
+
+        return new Color(0.14f, 0.17f, 0.23f, 0.96f);
+    }
+
+    private Color GetSlotIconColor(string slotName)
+    {
+        if (IsWeaponSlot(slotName) && HasEquippedWeapon())
+        {
+            return new Color(0.46f, 0.36f, 0.12f, 1f);
+        }
+
+        return new Color(0.28f, 0.33f, 0.43f, 1f);
+    }
+
+    private string GetWeaponSlotStatusText()
+    {
+        return HasEquippedWeapon() ? "\uCC29\uC6A9" : "\uBE48 \uC2AC\uB86F";
+    }
+
+    private Color GetWeaponSlotStatusTextColor()
+    {
+        return HasEquippedWeapon()
+            ? new Color(1f, 0.9f, 0.48f, 1f)
+            : new Color(0.62f, 0.68f, 0.76f, 1f);
+    }
+
     private void RefreshWeaponSlotButtonText()
     {
         GameObject rootObject = equipmentContentRoot != null ? equipmentContentRoot : GetExistingRootObject();
@@ -1039,6 +1105,27 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         if (slotText != null)
         {
             slotText.text = GetSlotDisplayText(OffensiveSlotNames[0]);
+        }
+
+        Image background = weaponButton != null ? weaponButton.GetComponent<Image>() : null;
+        if (background != null)
+        {
+            background.color = GetSlotBackgroundColor(OffensiveSlotNames[0]);
+        }
+
+        Transform iconTransform = weaponButton != null ? GetDirectChild(weaponButton, "IconPlaceholder") : null;
+        Image iconImage = iconTransform != null ? iconTransform.GetComponent<Image>() : null;
+        if (iconImage != null)
+        {
+            iconImage.color = GetSlotIconColor(OffensiveSlotNames[0]);
+        }
+
+        Transform statusTransform = weaponButton != null ? GetDirectChild(weaponButton, "WeaponSlotStatusText") : null;
+        Text statusText = statusTransform != null ? statusTransform.GetComponent<Text>() : null;
+        if (statusText != null)
+        {
+            statusText.text = GetWeaponSlotStatusText();
+            statusText.color = GetWeaponSlotStatusTextColor();
         }
     }
 
