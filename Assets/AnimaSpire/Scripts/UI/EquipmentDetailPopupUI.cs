@@ -295,10 +295,13 @@ public sealed class EquipmentDetailPopupUI : MonoBehaviour
     {
         button.interactable = interactable;
         button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(() => Debug.Log("031S-2\uC5D0\uC11C \uAD6C\uD604 \uC608\uC815"));
         if (action != null)
         {
             button.onClick.AddListener(action);
+        }
+        else
+        {
+            button.onClick.AddListener(() => Debug.Log("031S-2\uC5D0\uC11C \uAD6C\uD604 \uC608\uC815"));
         }
 
         Image image = button.targetGraphic as Image;

@@ -374,7 +374,7 @@ public sealed class ProgressSaveManager : MonoBehaviour
 
     private void HandleEquippedMagicBookChangedByGameplay(EquipmentStackKey? key)
     {
-        MarkDirty();
+        ScheduleSaveSoon();
     }
 
     private void HandleWeaponSlotUpgraded(int slotLevel)

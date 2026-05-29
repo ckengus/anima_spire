@@ -285,36 +285,75 @@ public class EquipmentManager : MonoBehaviour
 
     public bool TryEquipMagicBook(EquipmentId id, out string message)
     {
-        EquipmentTier tier = EquipmentTier.T0;
+        return TryEquipEquipment(new EquipmentStackKey(id, EquipmentTier.T0), out message);
+    }
 
-        if (id != EquipmentId.AMagicBook && id != EquipmentId.BMagicBook)
+    public bool CanEquipEquipment(EquipmentStackKey key, out string message)
+    {
+        if (!EquipmentCatalog.TryGetDefinition(key.id, key.tier, out EquipmentDefinition definition))
         {
-            message = "Only MagicBook equipment can be equipped now.";
+            message = "\uC7A5\uBE44 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.";
             return false;
         }
 
-        if (!EquipmentCatalog.TryGetDefinition(id, tier, out EquipmentDefinition definition))
+        if (definition.category != EquipmentCategory.Weapon)
         {
-            message = "MagicBook data is missing.";
+            message = "\uD604\uC7AC\uB294 Weapon \uC7A5\uBE44\uB9CC \uCC29\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.";
             return false;
         }
 
-        if (!collectionState.HasOwned(id, tier))
+        if (!collectionState.HasOwned(key.id, key.tier))
         {
-            message = $"You do not own {definition.displayName} {tier}.";
+            message = "\uBCF4\uC720\uD558\uC9C0 \uC54A\uC740 \uC7A5\uBE44\uC785\uB2C8\uB2E4.";
             return false;
         }
 
-        EquipmentStackKey nextKey = new EquipmentStackKey(id, tier);
-        bool changed = !loadoutState.TryGetEquippedMagicBook(out EquipmentStackKey currentKey) || currentKey != nextKey;
-        loadoutState.EquipMagicBook(nextKey);
-        if (changed)
-        {
-            OnEquippedMagicBookChangedByGameplay?.Invoke(nextKey);
-        }
-
-        message = $"Equipped {definition.displayName} {tier}.";
+        message = "\uCC29\uC6A9 \uAC00\uB2A5\uD569\uB2C8\uB2E4.";
         return true;
+    }
+
+    public bool TryEquipEquipment(EquipmentStackKey key, out string message)
+    {
+        if (!CanEquipEquipment(key, out message))
+        {
+            return false;
+        }
+
+        EquipmentCatalog.TryGetDefinition(key.id, key.tier, out EquipmentDefinition definition);
+        if (loadoutState.TryGetEquippedMagicBook(out EquipmentStackKey currentKey) && currentKey == key)
+        {
+            message = "\uC774\uBBF8 \uCC29\uC6A9 \uC911\uC785\uB2C8\uB2E4.";
+            return true;
+        }
+
+        loadoutState.EquipMagicBook(key);
+        OnEquippedMagicBookChangedByGameplay?.Invoke(key);
+        message = $"\uCC29\uC6A9 \uC644\uB8CC: {definition.displayName} {key.tier}";
+        return true;
+    }
+
+    public bool TryUnequipEquipment(out string message)
+    {
+        if (!loadoutState.HasEquippedMagicBook())
+        {
+            message = "\uCC29\uC6A9 \uC911\uC778 \uC7A5\uBE44\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.";
+            return false;
+        }
+
+        if (!loadoutState.UnequipMagicBook())
+        {
+            message = "\uCC29\uC6A9 \uC911\uC778 \uC7A5\uBE44\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.";
+            return false;
+        }
+
+        OnEquippedMagicBookChangedByGameplay?.Invoke(null);
+        message = "\uC7A5\uBE44\uB97C \uD574\uC81C\uD588\uC2B5\uB2C8\uB2E4.";
+        return true;
+    }
+
+    public bool IsEquippedEquipment(EquipmentStackKey key)
+    {
+        return loadoutState.TryGetEquippedMagicBook(out EquipmentStackKey currentKey) && currentKey == key;
     }
 
     public bool HasEquippedMagicBook()

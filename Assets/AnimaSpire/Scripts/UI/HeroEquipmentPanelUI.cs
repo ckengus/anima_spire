@@ -94,6 +94,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         }
 
         RefreshOwnedEquipmentCodexCards();
+        RefreshWeaponSlotButtonText();
     }
 
     public void ShowPanel()
@@ -677,18 +678,22 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
             ? new Color(0.9f, 0.94f, 1f, 1f)
             : new Color(0.44f, 0.5f, 0.58f, 1f);
 
-        Text nameText = EnsureText(cardObject.transform, "NameText", definition.displayName, 20, TextAnchor.MiddleCenter, 34f);
+        Text nameText = EnsureText(cardObject.transform, "NameText", definition.displayName, 20, TextAnchor.MiddleCenter, 30f);
         nameText.color = isOwned ? Color.white : new Color(0.58f, 0.64f, 0.72f, 1f);
 
-        Text stateText = EnsureText(cardObject.transform, "StateText", isOwned ? "\uD68D\uB4DD" : "\uBBF8\uD68D\uB4DD", 16, TextAnchor.MiddleCenter, 26f);
+        Text stateText = EnsureText(cardObject.transform, "StateText", isOwned ? "\uD68D\uB4DD" : "\uBBF8\uD68D\uB4DD", 16, TextAnchor.MiddleCenter, 22f);
         stateText.color = isOwned
             ? new Color(0.72f, 0.9f, 0.76f, 1f)
             : new Color(0.48f, 0.52f, 0.58f, 1f);
 
-        Text infoText = EnsureText(cardObject.transform, "InfoText", isOwned ? BuildTierCountSummary(tierCounts) : string.Empty, 15, TextAnchor.MiddleCenter, 34f);
+        Text infoText = EnsureText(cardObject.transform, "InfoText", isOwned ? BuildTierCountSummary(tierCounts) : string.Empty, 15, TextAnchor.MiddleCenter, 26f);
         infoText.color = isOwned
             ? new Color(0.76f, 0.82f, 0.9f, 1f)
             : new Color(0.38f, 0.42f, 0.48f, 1f);
+
+        bool isEquipped = IsDefinitionEquipped(definition);
+        Text equippedText = EnsureText(cardObject.transform, "EquippedText", isEquipped ? "\uCC29\uC6A9 \uC911" : string.Empty, 16, TextAnchor.MiddleCenter, 20f);
+        equippedText.color = new Color(1f, 0.88f, 0.48f, 1f);
     }
 
     private void ShowEquipmentDetailPopup(EquipmentDefinition definition, Dictionary<EquipmentTier, int> tierCounts, bool isOwned)
@@ -701,17 +706,74 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         Dictionary<EquipmentTier, int> tierCountsCopy = tierCounts != null
             ? new Dictionary<EquipmentTier, int>(tierCounts)
             : null;
+        EquipmentStackKey key = new EquipmentStackKey(definition.id, definition.tier);
+        bool isEquipped = equipmentManager != null && equipmentManager.IsEquippedEquipment(key);
+        bool canEquip = equipmentManager != null && !isEquipped && equipmentManager.CanEquipEquipment(key, out string _);
+        bool canUnequip = isEquipped;
 
         equipmentDetailPopup.ShowPopup(
             definition,
             tierCountsCopy,
             isOwned,
-            false,
-            false,
-            false,
-            () => Debug.Log("Equipment equip placeholder clicked. 031S-2 will implement equip."),
-            () => Debug.Log("Equipment unequip placeholder clicked. 031S-2 will implement unequip."),
+            isEquipped,
+            canEquip,
+            canUnequip,
+            () => HandleEquipButtonClicked(key),
+            HandleUnequipButtonClicked,
             null);
+    }
+
+    private void HandleEquipButtonClicked(EquipmentStackKey key)
+    {
+        if (equipmentManager == null)
+        {
+            Debug.LogWarning("\uC7A5\uBE44 \uC2DC\uC2A4\uD15C\uC774 \uC900\uBE44\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+            return;
+        }
+
+        bool succeeded = equipmentManager.TryEquipEquipment(key, out string message);
+        if (!succeeded)
+        {
+            Debug.LogWarning(message);
+            return;
+        }
+
+        Debug.Log(message);
+        HideEquipmentDetailPopup();
+        RefreshOwnedEquipmentCodexCards();
+        RefreshWeaponSlotButtonText();
+    }
+
+    private void HandleUnequipButtonClicked()
+    {
+        if (equipmentManager == null)
+        {
+            Debug.LogWarning("\uC7A5\uBE44 \uC2DC\uC2A4\uD15C\uC774 \uC900\uBE44\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+            return;
+        }
+
+        bool succeeded = equipmentManager.TryUnequipEquipment(out string message);
+        if (!succeeded)
+        {
+            Debug.LogWarning(message);
+            return;
+        }
+
+        Debug.Log(message);
+        HideEquipmentDetailPopup();
+        RefreshOwnedEquipmentCodexCards();
+        RefreshWeaponSlotButtonText();
+    }
+
+    private bool IsDefinitionEquipped(EquipmentDefinition definition)
+    {
+        if (equipmentManager == null || definition == null)
+        {
+            return false;
+        }
+
+        EquipmentStackKey key = new EquipmentStackKey(definition.id, definition.tier);
+        return equipmentManager.IsEquippedEquipment(key);
     }
 
     private void HideEquipmentDetailPopup()
@@ -935,9 +997,49 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         Text iconText = EnsureText(iconObject.transform, "IconText", "?", 22, TextAnchor.MiddleCenter, 0f);
         iconText.color = new Color(0.9f, 0.94f, 1f, 1f);
 
-        Text slotText = EnsureText(buttonObject.transform, "SlotNameText", slotName, 22, TextAnchor.MiddleLeft, 0f);
+        Text slotText = EnsureText(buttonObject.transform, "SlotNameText", GetSlotDisplayText(slotName), 22, TextAnchor.MiddleLeft, 0f);
         LayoutElement slotTextLayout = EnsureLayoutElement(slotText.gameObject);
         slotTextLayout.flexibleWidth = 1f;
+    }
+
+    private string GetSlotDisplayText(string slotName)
+    {
+        if (!IsWeaponSlot(slotName))
+        {
+            return slotName;
+        }
+
+        if (equipmentManager == null || !equipmentManager.TryGetEquippedMagicBook(out EquipmentStackKey key))
+        {
+            return slotName + "\n\uBBF8\uCC29\uC6A9";
+        }
+
+        if (!EquipmentCatalog.TryGetDefinition(key.id, key.tier, out EquipmentDefinition definition))
+        {
+            return slotName + "\n\uBBF8\uCC29\uC6A9";
+        }
+
+        return slotName + "\n" + definition.displayName + " " + key.tier;
+    }
+
+    private void RefreshWeaponSlotButtonText()
+    {
+        GameObject rootObject = equipmentContentRoot != null ? equipmentContentRoot : GetExistingRootObject();
+        if (rootObject == null)
+        {
+            return;
+        }
+
+        Transform equippedArea = GetDirectChild(rootObject.transform, "EquippedEquipmentArea");
+        Transform row = equippedArea != null ? GetDirectChild(equippedArea, "HeroEquipmentSlotLayout") : null;
+        Transform offensiveColumn = row != null ? GetDirectChild(row, "OffensiveEquipmentSlots") : null;
+        Transform weaponButton = offensiveColumn != null ? GetDirectChild(offensiveColumn, "EquipmentSlotButton_" + OffensiveSlotNames[0]) : null;
+        Transform textTransform = weaponButton != null ? GetDirectChild(weaponButton, "SlotNameText") : null;
+        Text slotText = textTransform != null ? textTransform.GetComponent<Text>() : null;
+        if (slotText != null)
+        {
+            slotText.text = GetSlotDisplayText(OffensiveSlotNames[0]);
+        }
     }
 
     private void EnsureSummaryCard(Transform parent)
