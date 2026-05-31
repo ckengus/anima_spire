@@ -17,6 +17,15 @@ public class MainTabController : MonoBehaviour
     private const float GlobalTabButtonWidth = 82f;
     private const float GlobalTabButtonHeight = 72f;
 
+    private enum GlobalTabState
+    {
+        Combat,
+        Hero,
+        Laboratory,
+        Guild,
+        Shop
+    }
+
     [SerializeField] private GameObject headerPanel;
     [SerializeField] private GameObject combatPanel;
     [SerializeField] private GameObject infoPanel;
@@ -35,10 +44,17 @@ public class MainTabController : MonoBehaviour
     private HeroEquipmentPanelUI equipmentPanelController;
     private LaboratoryPanelUI laboratoryPanelController;
     private EquipmentSynthesisPanelUI equipmentSynthesisPanelController;
+    private GlobalTabState currentGlobalTabState = GlobalTabState.Combat;
+    private GameObject globalTabSurfaceRoot;
+    private Image globalTabBackgroundSurface;
+    private GameObject globalTabPlaceholderPanel;
+    private Text globalTabPlaceholderTitle;
+    private Text globalTabPlaceholderMessage;
 
     private void Awake()
     {
         EnsureReferences();
+        EnsureGlobalTabSurfaceRoot();
         EnsureEventSystem();
         EnsureEquipmentManager();
         EnsureThreeAreaLayout();
@@ -60,6 +76,9 @@ public class MainTabController : MonoBehaviour
 
     public void ShowBattle()
     {
+        currentGlobalTabState = GlobalTabState.Combat;
+        ApplyGlobalTabSurfaceState();
+        HideGlobalTabPlaceholder();
         SetActiveIfPresent(combatPanel, true);
         SetActiveIfPresent(infoPanel, true);
         SetActiveIfPresent(tabContentPanel, false);
@@ -89,6 +108,9 @@ public class MainTabController : MonoBehaviour
 
     public void ShowLaboratory()
     {
+        currentGlobalTabState = GlobalTabState.Laboratory;
+        ApplyGlobalTabSurfaceState();
+        HideGlobalTabPlaceholder();
         SetActiveIfPresent(combatPanel, true);
         SetActiveIfPresent(infoPanel, true);
         SetActiveIfPresent(tabContentPanel, false);
@@ -221,6 +243,12 @@ public class MainTabController : MonoBehaviour
         return foregroundOverlay;
     }
 
+    private Transform FindGlobalSurfaceParent()
+    {
+        Transform overlayCanvas = FindSceneDescendantByName("UI_OverlayCanvas");
+        return overlayCanvas != null ? overlayCanvas : transform;
+    }
+
     private Transform FindTabContentParent()
     {
         Transform mainContentArea = FindSceneDescendantByName("MainContentArea");
@@ -253,6 +281,102 @@ public class MainTabController : MonoBehaviour
         ApplyAnchors(mainContentObject, Vector2.zero, Vector2.one);
 
         return mainContentObject.transform;
+    }
+
+    private void EnsureGlobalTabSurfaceRoot()
+    {
+        Transform parent = FindGlobalSurfaceParent();
+        Transform existingRoot = parent.Find("GlobalTabSurfaceRoot");
+        if (existingRoot == null)
+        {
+            existingRoot = FindSceneDescendantByName("GlobalTabSurfaceRoot");
+        }
+
+        globalTabSurfaceRoot = existingRoot != null
+            ? existingRoot.gameObject
+            : new GameObject("GlobalTabSurfaceRoot", typeof(RectTransform));
+
+        globalTabSurfaceRoot.transform.SetParent(parent, false);
+        StretchToParent(globalTabSurfaceRoot.GetComponent<RectTransform>());
+
+        Transform existingSurface = globalTabSurfaceRoot.transform.Find("GlobalTabBackgroundSurface");
+        GameObject surfaceObject = existingSurface != null
+            ? existingSurface.gameObject
+            : new GameObject("GlobalTabBackgroundSurface", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        surfaceObject.transform.SetParent(globalTabSurfaceRoot.transform, false);
+        StretchToParent(surfaceObject.GetComponent<RectTransform>());
+
+        globalTabBackgroundSurface = surfaceObject.GetComponent<Image>();
+        globalTabBackgroundSurface.raycastTarget = false;
+
+        SetGlobalTabSurfaceSiblingOrder();
+        ApplyGlobalTabSurfaceState();
+    }
+
+    private void SetGlobalTabSurfaceSiblingOrder()
+    {
+        if (globalTabSurfaceRoot == null)
+        {
+            return;
+        }
+
+        Transform safeAreaRoot = FindSafeAreaRoot();
+        if (safeAreaRoot != null && safeAreaRoot.parent == globalTabSurfaceRoot.transform.parent)
+        {
+            int safeAreaIndex = safeAreaRoot.GetSiblingIndex();
+            int currentIndex = globalTabSurfaceRoot.transform.GetSiblingIndex();
+            int targetIndex = currentIndex < safeAreaIndex ? safeAreaIndex - 1 : safeAreaIndex;
+            globalTabSurfaceRoot.transform.SetSiblingIndex(Mathf.Max(0, targetIndex));
+        }
+        else
+        {
+            globalTabSurfaceRoot.transform.SetAsFirstSibling();
+        }
+
+        Transform fullScreenForegroundOverlay = FindFullScreenForegroundOverlay();
+        fullScreenForegroundOverlay?.SetAsLastSibling();
+    }
+
+    private void ApplyGlobalTabSurfaceState()
+    {
+        EnsureGlobalTabSurfaceRootIfMissing();
+
+        if (globalTabBackgroundSurface == null)
+        {
+            return;
+        }
+
+        bool showBackground = currentGlobalTabState != GlobalTabState.Combat;
+        globalTabSurfaceRoot.SetActive(showBackground);
+        globalTabBackgroundSurface.enabled = showBackground;
+        globalTabBackgroundSurface.color = GetGlobalTabSurfaceColor(currentGlobalTabState);
+        globalTabBackgroundSurface.raycastTarget = false;
+    }
+
+    private void EnsureGlobalTabSurfaceRootIfMissing()
+    {
+        if (globalTabSurfaceRoot == null || globalTabBackgroundSurface == null)
+        {
+            EnsureGlobalTabSurfaceRoot();
+        }
+    }
+
+    private Color GetGlobalTabSurfaceColor(GlobalTabState tabState)
+    {
+        switch (tabState)
+        {
+            case GlobalTabState.Hero:
+                return new Color(0.075f, 0.09f, 0.13f, 1f);
+            case GlobalTabState.Laboratory:
+                return new Color(0.045f, 0.07f, 0.105f, 1f);
+            case GlobalTabState.Guild:
+                return new Color(0.065f, 0.075f, 0.105f, 1f);
+            case GlobalTabState.Shop:
+                return new Color(0.08f, 0.075f, 0.095f, 1f);
+            case GlobalTabState.Combat:
+            default:
+                return new Color(0f, 0f, 0f, 0f);
+        }
     }
 
     private void EnsureThreeAreaLayout()
@@ -670,29 +794,115 @@ public class MainTabController : MonoBehaviour
 
     private void ShowHeroTabPlaceholder()
     {
-        ShowUnavailableGlobalTab("Hero tab is not implemented yet.");
+        ShowGlobalTabPlaceholder(GlobalTabState.Hero, "\uC601\uC6C5", "\uC601\uC6C5 \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
     }
 
     private void ShowLaboratoryTabPlaceholder()
     {
-        ShowUnavailableGlobalTab("Laboratory tab shell is not implemented yet.");
+        ShowLaboratory();
     }
 
     private void ShowGuildTabPlaceholder()
     {
-        ShowUnavailableGlobalTab("Guild tab is not implemented yet.");
+        ShowGlobalTabPlaceholder(GlobalTabState.Guild, "\uD559\uD68C", "\uD559\uD68C \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
     }
 
     private void ShowShopTabPlaceholder()
     {
-        ShowUnavailableGlobalTab("Shop tab is not implemented yet.");
+        ShowGlobalTabPlaceholder(GlobalTabState.Shop, "\uC0C1\uC810", "\uC0C1\uC810 \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
     }
 
     private void ShowUnavailableGlobalTab(string message)
     {
         Debug.Log(message);
-        ShowBattle();
+        ShowGlobalTabPlaceholder(GlobalTabState.Hero, "\uC900\uBE44 \uC911", message);
         SetBottomMenuAsLastSibling();
+    }
+
+    private void ShowGlobalTabPlaceholder(GlobalTabState tabState, string title, string message)
+    {
+        currentGlobalTabState = tabState;
+        ApplyGlobalTabSurfaceState();
+        EnsureGlobalTabPlaceholderPanel();
+        SetActiveIfPresent(combatPanel, true);
+        SetActiveIfPresent(infoPanel, true);
+        SetActiveIfPresent(tabContentPanel, false);
+        SetActiveIfPresent(equipmentPanel, false);
+        equipmentPanelController?.HidePanel();
+        laboratoryPanelController?.HidePanel();
+        equipmentSynthesisPanelController?.HidePanel();
+
+        globalTabPlaceholderTitle.text = title;
+        globalTabPlaceholderMessage.text = message;
+        globalTabPlaceholderPanel.SetActive(true);
+        globalTabPlaceholderPanel.transform.SetAsLastSibling();
+        SetBottomMenuAsLastSibling();
+    }
+
+    private void EnsureGlobalTabPlaceholderPanel()
+    {
+        Transform mainContentArea = EnsureMainContentArea();
+        Transform existing = mainContentArea.Find("GlobalTabPlaceholderPanel");
+        globalTabPlaceholderPanel = existing != null
+            ? existing.gameObject
+            : new GameObject("GlobalTabPlaceholderPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        globalTabPlaceholderPanel.transform.SetParent(mainContentArea, false);
+        StretchToParent(globalTabPlaceholderPanel.GetComponent<RectTransform>());
+
+        Image image = globalTabPlaceholderPanel.GetComponent<Image>();
+        image.color = new Color(0.02f, 0.024f, 0.032f, 0.68f);
+        image.raycastTarget = false;
+
+        globalTabPlaceholderTitle = EnsurePlaceholderText(
+            globalTabPlaceholderPanel.transform,
+            "PlaceholderTitle",
+            new Vector2(0.08f, 0.5f),
+            new Vector2(0.92f, 0.62f),
+            30,
+            TextAnchor.LowerCenter);
+
+        globalTabPlaceholderMessage = EnsurePlaceholderText(
+            globalTabPlaceholderPanel.transform,
+            "PlaceholderMessage",
+            new Vector2(0.08f, 0.38f),
+            new Vector2(0.92f, 0.5f),
+            20,
+            TextAnchor.UpperCenter);
+    }
+
+    private Text EnsurePlaceholderText(Transform parent, string objectName, Vector2 anchorMin, Vector2 anchorMax, int fontSize, TextAnchor alignment)
+    {
+        Transform existing = parent.Find(objectName);
+        GameObject textObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = anchorMin;
+        rectTransform.anchorMax = anchorMax;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = fontSize;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 12;
+        text.resizeTextMaxSize = fontSize;
+        text.alignment = alignment;
+        text.color = Color.white;
+        text.raycastTarget = false;
+
+        return text;
+    }
+
+    private void HideGlobalTabPlaceholder()
+    {
+        if (globalTabPlaceholderPanel != null)
+        {
+            globalTabPlaceholderPanel.SetActive(false);
+        }
     }
 
     private void EnsureBottomMenuLayout()
