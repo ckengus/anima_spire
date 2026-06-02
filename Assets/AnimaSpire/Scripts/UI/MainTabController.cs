@@ -47,6 +47,8 @@ public class MainTabController : MonoBehaviour
     private GlobalTabState currentGlobalTabState = GlobalTabState.Combat;
     private GameObject globalTabSurfaceRoot;
     private Image globalTabBackgroundSurface;
+    private GameObject nonCombatPageBackgroundLayer;
+    private Image nonCombatPageBackgroundImage;
     private GameObject globalTabPlaceholderPanel;
     private Text globalTabPlaceholderTitle;
     private Text globalTabPlaceholderMessage;
@@ -309,8 +311,43 @@ public class MainTabController : MonoBehaviour
         globalTabBackgroundSurface = surfaceObject.GetComponent<Image>();
         globalTabBackgroundSurface.raycastTarget = false;
 
+        EnsureBackgroundLayerInfrastructure();
         SetGlobalTabSurfaceSiblingOrder();
         ApplyGlobalTabSurfaceState();
+    }
+
+    private void EnsureBackgroundLayerInfrastructure()
+    {
+        if (globalTabSurfaceRoot == null)
+        {
+            EnsureGlobalTabSurfaceRoot();
+            return;
+        }
+
+        Transform existingBackgroundLayer = globalTabSurfaceRoot.transform.Find("NonCombatPageBackgroundLayer");
+        nonCombatPageBackgroundLayer = existingBackgroundLayer != null
+            ? existingBackgroundLayer.gameObject
+            : new GameObject("NonCombatPageBackgroundLayer", typeof(RectTransform));
+        nonCombatPageBackgroundLayer.transform.SetParent(globalTabSurfaceRoot.transform, false);
+        nonCombatPageBackgroundLayer.transform.SetAsFirstSibling();
+        StretchToParent(nonCombatPageBackgroundLayer.GetComponent<RectTransform>());
+
+        Transform existingBackgroundImage = nonCombatPageBackgroundLayer.transform.Find("NonCombatPageBackgroundImage");
+        GameObject backgroundImageObject = existingBackgroundImage != null
+            ? existingBackgroundImage.gameObject
+            : new GameObject("NonCombatPageBackgroundImage", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        backgroundImageObject.transform.SetParent(nonCombatPageBackgroundLayer.transform, false);
+        StretchToParent(backgroundImageObject.GetComponent<RectTransform>());
+
+        nonCombatPageBackgroundImage = backgroundImageObject.GetComponent<Image>();
+        nonCombatPageBackgroundImage.raycastTarget = false;
+
+        if (globalTabBackgroundSurface != null)
+        {
+            globalTabBackgroundSurface.enabled = false;
+            globalTabBackgroundSurface.color = Color.clear;
+            globalTabBackgroundSurface.raycastTarget = false;
+        }
     }
 
     private void SetGlobalTabSurfaceSiblingOrder()
@@ -341,24 +378,66 @@ public class MainTabController : MonoBehaviour
     {
         EnsureGlobalTabSurfaceRootIfMissing();
 
-        if (globalTabBackgroundSurface == null)
+        if (nonCombatPageBackgroundImage == null)
         {
             return;
         }
 
         bool showBackground = currentGlobalTabState != GlobalTabState.Combat;
         globalTabSurfaceRoot.SetActive(showBackground);
-        globalTabBackgroundSurface.enabled = showBackground;
-        globalTabBackgroundSurface.color = GetGlobalTabSurfaceColor(currentGlobalTabState);
-        globalTabBackgroundSurface.raycastTarget = false;
+        SetNonCombatPageBackgroundVisible(showBackground);
+        SetNonCombatPageBackgroundColor(GetGlobalTabSurfaceColor(currentGlobalTabState));
     }
 
     private void EnsureGlobalTabSurfaceRootIfMissing()
     {
-        if (globalTabSurfaceRoot == null || globalTabBackgroundSurface == null)
+        if (globalTabSurfaceRoot == null || globalTabBackgroundSurface == null || nonCombatPageBackgroundImage == null)
         {
             EnsureGlobalTabSurfaceRoot();
         }
+    }
+
+    private void SetNonCombatPageBackgroundVisible(bool isVisible)
+    {
+        if (nonCombatPageBackgroundLayer != null)
+        {
+            nonCombatPageBackgroundLayer.SetActive(isVisible);
+        }
+
+        if (nonCombatPageBackgroundImage != null)
+        {
+            nonCombatPageBackgroundImage.enabled = isVisible;
+            nonCombatPageBackgroundImage.raycastTarget = false;
+        }
+
+        if (globalTabBackgroundSurface != null)
+        {
+            globalTabBackgroundSurface.enabled = false;
+            globalTabBackgroundSurface.raycastTarget = false;
+        }
+    }
+
+    private void SetNonCombatPageBackgroundColor(Color color)
+    {
+        if (nonCombatPageBackgroundImage == null)
+        {
+            return;
+        }
+
+        nonCombatPageBackgroundImage.color = color;
+        nonCombatPageBackgroundImage.raycastTarget = false;
+    }
+
+    private void SetNonCombatPageBackgroundSprite(Sprite sprite)
+    {
+        if (nonCombatPageBackgroundImage == null)
+        {
+            return;
+        }
+
+        nonCombatPageBackgroundImage.sprite = sprite;
+        nonCombatPageBackgroundImage.preserveAspect = false;
+        nonCombatPageBackgroundImage.raycastTarget = false;
     }
 
     private Color GetGlobalTabSurfaceColor(GlobalTabState tabState)
