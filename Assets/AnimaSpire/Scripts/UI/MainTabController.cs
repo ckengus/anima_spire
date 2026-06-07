@@ -56,6 +56,7 @@ public class MainTabController : MonoBehaviour
     private void Awake()
     {
         EnsureReferences();
+        EnsureGlobalFrameHierarchy();
         EnsureGlobalTabSurfaceRoot();
         EnsureEventSystem();
         EnsureEquipmentManager();
@@ -67,6 +68,7 @@ public class MainTabController : MonoBehaviour
         EnsureBottomMenuButtons();
         EnsureLaboratoryPanel();
         EnsureEquipmentSynthesisPanel();
+        SetGlobalFrameSiblingOrder();
         ShowBattle();
     }
 
@@ -340,6 +342,57 @@ public class MainTabController : MonoBehaviour
 
         Transform safeAreaRoot = FindSafeAreaRoot();
         return safeAreaRoot != null ? safeAreaRoot : transform;
+    }
+
+    private void EnsureGlobalFrameHierarchy()
+    {
+        Transform safeAreaRoot = FindSafeAreaRoot();
+        if (safeAreaRoot == null)
+        {
+            return;
+        }
+
+        Transform gameContentRoot = EnsureFrameRoot(safeAreaRoot, "GameContentRoot");
+        Transform pageRoot = EnsureFrameRoot(gameContentRoot, "PageRoot");
+
+        ParentIfPresent("TopBarOverlay", gameContentRoot);
+        ParentIfPresent("PopupOverlay", gameContentRoot);
+        ParentIfPresent("BottomGlobalTabArea", gameContentRoot);
+        ParentIfPresent("CombatContentArea", pageRoot);
+        ParentIfPresent("MainContentArea", pageRoot);
+
+        SetGlobalFrameSiblingOrder();
+    }
+
+    private Transform EnsureFrameRoot(Transform parent, string objectName)
+    {
+        Transform existing = FindSceneDescendantByName(objectName);
+        GameObject rootObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform));
+
+        rootObject.transform.SetParent(parent, false);
+        rootObject.layer = parent.gameObject.layer;
+
+        RectTransform rectTransform = rootObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = rootObject.AddComponent<RectTransform>();
+        }
+
+        StretchToParent(rectTransform);
+        return rootObject.transform;
+    }
+
+    private void ParentIfPresent(string objectName, Transform parent)
+    {
+        Transform target = FindSceneDescendantByName(objectName);
+        if (target == null || parent == null || target == parent)
+        {
+            return;
+        }
+
+        target.SetParent(parent, false);
     }
 
     private Transform EnsureMainContentArea()
@@ -1389,10 +1442,10 @@ public class MainTabController : MonoBehaviour
 
     private void SetBottomMenuAsLastSibling()
     {
+        SetGlobalFrameSiblingOrder();
+
         if (bottomGlobalTabArea != null)
         {
-            bottomGlobalTabArea.transform.SetAsLastSibling();
-
             Transform fullScreenForegroundOverlay = FindFullScreenForegroundOverlay();
             fullScreenForegroundOverlay?.SetAsLastSibling();
             return;
@@ -1405,6 +1458,29 @@ public class MainTabController : MonoBehaviour
 
         Transform fallbackForegroundOverlay = FindFullScreenForegroundOverlay();
         fallbackForegroundOverlay?.SetAsLastSibling();
+    }
+
+    private void SetGlobalFrameSiblingOrder()
+    {
+        Transform gameContentRoot = FindGameContentRoot();
+        if (gameContentRoot == null)
+        {
+            return;
+        }
+
+        MoveDirectChildToLast(gameContentRoot, "TopBarOverlay");
+        MoveDirectChildToLast(gameContentRoot, "PageRoot");
+        MoveDirectChildToLast(gameContentRoot, "BottomGlobalTabArea");
+        MoveDirectChildToLast(gameContentRoot, "PopupOverlay");
+    }
+
+    private void MoveDirectChildToLast(Transform parent, string childName)
+    {
+        Transform child = parent.Find(childName);
+        if (child != null)
+        {
+            child.SetAsLastSibling();
+        }
     }
 
     private void SetActiveIfPresent(GameObject target, bool isActive)
