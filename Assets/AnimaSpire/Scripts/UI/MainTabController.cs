@@ -234,6 +234,31 @@ public class MainTabController : MonoBehaviour
         return safeAreaRoot;
     }
 
+    private Transform FindOverlayCanvas()
+    {
+        return FindSceneDescendantByName("UI_OverlayCanvas");
+    }
+
+    private Transform FindBackgroundLayer()
+    {
+        return FindSceneDescendantByName("BackgroundLayer");
+    }
+
+    private Transform FindGameContentRoot()
+    {
+        return FindSceneDescendantByName("GameContentRoot");
+    }
+
+    private Transform FindPageRoot()
+    {
+        return FindSceneDescendantByName("PageRoot");
+    }
+
+    private Transform FindPopupOverlay()
+    {
+        return FindSceneDescendantByName("PopupOverlay");
+    }
+
     private Transform FindFullScreenForegroundOverlay()
     {
         Transform foregroundOverlay = FindSceneDescendantByName("FullScreenForegroundOverlay");
@@ -247,7 +272,13 @@ public class MainTabController : MonoBehaviour
 
     private Transform FindGlobalSurfaceParent()
     {
-        Transform overlayCanvas = FindSceneDescendantByName("UI_OverlayCanvas");
+        Transform backgroundLayer = FindBackgroundLayer();
+        if (backgroundLayer != null)
+        {
+            return backgroundLayer;
+        }
+
+        Transform overlayCanvas = FindOverlayCanvas();
         return overlayCanvas != null ? overlayCanvas : transform;
     }
 
@@ -259,14 +290,56 @@ public class MainTabController : MonoBehaviour
             return mainContentArea;
         }
 
+        Transform pageRoot = FindPageRoot();
+        if (pageRoot != null)
+        {
+            return pageRoot;
+        }
+
         Transform safeAreaRoot = FindSafeAreaRoot();
         if (safeAreaRoot != null)
         {
             return safeAreaRoot;
         }
 
-        Transform overlayCanvas = FindSceneDescendantByName("UI_OverlayCanvas");
+        Transform overlayCanvas = FindOverlayCanvas();
         return overlayCanvas != null ? overlayCanvas : transform;
+    }
+
+    private Transform FindMainContentParent()
+    {
+        Transform pageRoot = FindPageRoot();
+        if (pageRoot != null)
+        {
+            return pageRoot;
+        }
+
+        Transform gameContentRoot = FindGameContentRoot();
+        if (gameContentRoot != null)
+        {
+            return gameContentRoot;
+        }
+
+        Transform safeAreaRoot = FindSafeAreaRoot();
+        if (safeAreaRoot != null)
+        {
+            return safeAreaRoot;
+        }
+
+        Transform overlayCanvas = FindOverlayCanvas();
+        return overlayCanvas != null ? overlayCanvas : transform;
+    }
+
+    private Transform FindBottomGlobalTabParent()
+    {
+        Transform gameContentRoot = FindGameContentRoot();
+        if (gameContentRoot != null)
+        {
+            return gameContentRoot;
+        }
+
+        Transform safeAreaRoot = FindSafeAreaRoot();
+        return safeAreaRoot != null ? safeAreaRoot : transform;
     }
 
     private Transform EnsureMainContentArea()
@@ -277,9 +350,8 @@ public class MainTabController : MonoBehaviour
             return mainContentArea;
         }
 
-        Transform safeAreaRoot = FindSafeAreaRoot();
         GameObject mainContentObject = new GameObject("MainContentArea", typeof(RectTransform));
-        mainContentObject.transform.SetParent(safeAreaRoot != null ? safeAreaRoot : transform, false);
+        mainContentObject.transform.SetParent(FindMainContentParent(), false);
         ApplyAnchors(mainContentObject, Vector2.zero, Vector2.one);
 
         return mainContentObject.transform;
@@ -707,8 +779,7 @@ public class MainTabController : MonoBehaviour
         if (bottomGlobalTabArea == null)
         {
             bottomGlobalTabArea = new GameObject("BottomGlobalTabArea", typeof(RectTransform)).gameObject;
-            Transform parent = FindSafeAreaRoot();
-            bottomGlobalTabArea.transform.SetParent(parent != null ? parent : transform, false);
+            bottomGlobalTabArea.transform.SetParent(FindBottomGlobalTabParent(), false);
             ApplyAnchors(bottomGlobalTabArea, Vector2.zero, new Vector2(1f, BottomMenuRatio));
         }
 
@@ -1217,6 +1288,7 @@ public class MainTabController : MonoBehaviour
         }
 
         controller.SetEquipmentRootTarget(equipmentRootTarget);
+        controller.SetPopupRootTarget(FindPopupOverlay());
         controller.SetEquipmentManager(equipmentManager);
         equipmentPanelController = controller;
         equipmentPanelController.HidePanel();

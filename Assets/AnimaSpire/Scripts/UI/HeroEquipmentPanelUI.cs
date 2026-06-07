@@ -5,6 +5,7 @@ using UnityEngine.UI;
 public sealed class HeroEquipmentPanelUI : MonoBehaviour
 {
     private Transform equipmentRootTarget;
+    private Transform popupRootTarget;
     private EquipmentManager equipmentManager;
 
     private static readonly string[] OffensiveSlotNames =
@@ -79,6 +80,16 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         {
             equipmentContentRoot.SetActive(isPanelVisible);
         }
+
+        HideWeaponSlotUpgradePopup();
+        HideEquipmentDetailPopup();
+    }
+
+    public void SetPopupRootTarget(Transform target)
+    {
+        popupRootTarget = target;
+        weaponSlotUpgradePopupRoot = GetExistingWeaponSlotUpgradePopupObject();
+        equipmentDetailPopup = GetExistingEquipmentDetailPopup();
 
         HideWeaponSlotUpgradePopup();
         HideEquipmentDetailPopup();
@@ -850,31 +861,34 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
     private GameObject GetExistingWeaponSlotUpgradePopupObject()
     {
-        if (equipmentRootTarget == null)
+        Transform popupRoot = GetPopupRootTarget();
+        if (popupRoot == null)
         {
             return null;
         }
 
         const string objectName = "WeaponSlotUpgradePopup";
-        Transform existing = GetDirectChild(equipmentRootTarget, objectName);
+        Transform existing = GetDirectChild(popupRoot, objectName);
         return existing != null ? existing.gameObject : null;
     }
 
     private EquipmentDetailPopupUI GetExistingEquipmentDetailPopup()
     {
-        if (equipmentRootTarget == null)
+        Transform popupRoot = GetPopupRootTarget();
+        if (popupRoot == null)
         {
             return null;
         }
 
         const string objectName = "EquipmentDetailPopup";
-        Transform existing = GetDirectChild(equipmentRootTarget, objectName);
+        Transform existing = GetDirectChild(popupRoot, objectName);
         return existing != null ? existing.GetComponent<EquipmentDetailPopupUI>() : null;
     }
 
     private bool EnsureEquipmentDetailPopup()
     {
-        if (equipmentRootTarget == null)
+        Transform popupRoot = GetPopupRootTarget();
+        if (popupRoot == null)
         {
             Debug.LogError("HeroEquipmentPanelUI equipmentRootTarget is missing. EquipmentDetailPopup cannot be created.");
             return false;
@@ -889,7 +903,7 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         {
             const string objectName = "EquipmentDetailPopup";
             GameObject popupObject = new GameObject(objectName, typeof(RectTransform));
-            popupObject.transform.SetParent(equipmentRootTarget, false);
+            popupObject.transform.SetParent(popupRoot, false);
             StretchToParent(popupObject.GetComponent<RectTransform>());
             equipmentDetailPopup = popupObject.AddComponent<EquipmentDetailPopupUI>();
         }
@@ -1330,19 +1344,20 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
 
     private bool EnsureWeaponSlotUpgradePopup()
     {
-        if (equipmentRootTarget == null)
+        Transform popupRoot = GetPopupRootTarget();
+        if (popupRoot == null)
         {
             Debug.LogError("HeroEquipmentPanelUI equipmentRootTarget is missing. WeaponSlotUpgradePopup cannot be created.");
             return false;
         }
 
         const string objectName = "WeaponSlotUpgradePopup";
-        Transform existing = GetDirectChild(equipmentRootTarget, objectName);
+        Transform existing = GetDirectChild(popupRoot, objectName);
         bool wasActive = existing != null && existing.gameObject.activeSelf;
         weaponSlotUpgradePopupRoot = existing != null
             ? existing.gameObject
             : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        weaponSlotUpgradePopupRoot.transform.SetParent(equipmentRootTarget, false);
+        weaponSlotUpgradePopupRoot.transform.SetParent(popupRoot, false);
 
         RectTransform popupRect = weaponSlotUpgradePopupRoot.GetComponent<RectTransform>();
         StretchToParent(popupRect);
@@ -1544,8 +1559,18 @@ public sealed class HeroEquipmentPanelUI : MonoBehaviour
         weaponSlotUpgradeMessageText.color = new Color(0.8f, 0.88f, 1f, 1f);
     }
 
+    private Transform GetPopupRootTarget()
+    {
+        return popupRootTarget != null ? popupRootTarget : equipmentRootTarget;
+    }
+
     private Transform GetDirectChild(Transform parent, string childName)
     {
+        if (parent == null)
+        {
+            return null;
+        }
+
         for (int i = 0; i < parent.childCount; i++)
         {
             Transform child = parent.GetChild(i);
