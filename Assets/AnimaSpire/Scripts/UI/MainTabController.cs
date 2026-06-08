@@ -38,6 +38,9 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private Transform equipmentRootTarget;
     [SerializeField] private EquipmentManager equipmentManager;
     [SerializeField] private ProgressSaveManager progressSaveManager;
+    [SerializeField] private Sprite heroTabBackgroundSprite;
+    [SerializeField] private Sprite guildTabBackgroundSprite;
+    [SerializeField] private Sprite shopTabBackgroundSprite;
 
     private RectTransform combatHudRectTransform;
     private RectTransform equipmentPanelRectTransform;
@@ -49,6 +52,7 @@ public class MainTabController : MonoBehaviour
     private Image globalTabBackgroundSurface;
     private GameObject nonCombatPageBackgroundLayer;
     private Image nonCombatPageBackgroundImage;
+    private AspectRatioFitter nonCombatPageBackgroundAspectFitter;
     private GameObject globalTabPlaceholderPanel;
     private Text globalTabPlaceholderTitle;
     private Text globalTabPlaceholderMessage;
@@ -466,6 +470,7 @@ public class MainTabController : MonoBehaviour
 
         nonCombatPageBackgroundImage = backgroundImageObject.GetComponent<Image>();
         nonCombatPageBackgroundImage.raycastTarget = false;
+        EnsureNonCombatPageBackgroundAspectFitter();
 
         if (globalTabBackgroundSurface != null)
         {
@@ -503,15 +508,34 @@ public class MainTabController : MonoBehaviour
     {
         EnsureGlobalTabSurfaceRootIfMissing();
 
-        if (nonCombatPageBackgroundImage == null)
+        if (globalTabSurfaceRoot == null || nonCombatPageBackgroundImage == null)
         {
             return;
         }
 
-        bool showBackground = currentGlobalTabState != GlobalTabState.Combat;
+        if (currentGlobalTabState == GlobalTabState.Combat || currentGlobalTabState == GlobalTabState.Laboratory)
+        {
+            SetNonCombatPageBackgroundSprite(null);
+            SetNonCombatPageBackgroundVisible(false);
+            globalTabSurfaceRoot.SetActive(false);
+            return;
+        }
+
+        Sprite backgroundSprite = GetGlobalTabBackgroundSprite(currentGlobalTabState);
+        bool showBackground = backgroundSprite != null;
+
         globalTabSurfaceRoot.SetActive(showBackground);
         SetNonCombatPageBackgroundVisible(showBackground);
-        SetNonCombatPageBackgroundColor(GetGlobalTabSurfaceColor(currentGlobalTabState));
+
+        if (showBackground)
+        {
+            SetNonCombatPageBackgroundSprite(backgroundSprite);
+        }
+        else
+        {
+            SetNonCombatPageBackgroundSprite(null);
+            SetNonCombatPageBackgroundColor(GetGlobalTabSurfaceColor(currentGlobalTabState));
+        }
     }
 
     private void EnsureGlobalTabSurfaceRootIfMissing()
@@ -561,8 +585,64 @@ public class MainTabController : MonoBehaviour
         }
 
         nonCombatPageBackgroundImage.sprite = sprite;
+        nonCombatPageBackgroundImage.type = Image.Type.Simple;
+        nonCombatPageBackgroundImage.color = Color.white;
         nonCombatPageBackgroundImage.preserveAspect = false;
         nonCombatPageBackgroundImage.raycastTarget = false;
+        nonCombatPageBackgroundImage.enabled = sprite != null;
+        UpdateNonCombatPageBackgroundAspectRatio(sprite);
+    }
+
+    private Sprite GetGlobalTabBackgroundSprite(GlobalTabState tabState)
+    {
+        switch (tabState)
+        {
+            case GlobalTabState.Hero:
+                return heroTabBackgroundSprite;
+            case GlobalTabState.Guild:
+                return guildTabBackgroundSprite;
+            case GlobalTabState.Shop:
+                return shopTabBackgroundSprite;
+            case GlobalTabState.Combat:
+            case GlobalTabState.Laboratory:
+            default:
+                return null;
+        }
+    }
+
+    private void EnsureNonCombatPageBackgroundAspectFitter()
+    {
+        if (nonCombatPageBackgroundImage == null)
+        {
+            return;
+        }
+
+        RectTransform rectTransform = nonCombatPageBackgroundImage.rectTransform;
+        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.localScale = Vector3.one;
+
+        nonCombatPageBackgroundAspectFitter = nonCombatPageBackgroundImage.GetComponent<AspectRatioFitter>();
+        if (nonCombatPageBackgroundAspectFitter == null)
+        {
+            nonCombatPageBackgroundAspectFitter = nonCombatPageBackgroundImage.gameObject.AddComponent<AspectRatioFitter>();
+        }
+
+        nonCombatPageBackgroundAspectFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+    }
+
+    private void UpdateNonCombatPageBackgroundAspectRatio(Sprite sprite)
+    {
+        EnsureNonCombatPageBackgroundAspectFitter();
+
+        if (nonCombatPageBackgroundAspectFitter == null || sprite == null || sprite.rect.height <= 0f)
+        {
+            return;
+        }
+
+        nonCombatPageBackgroundAspectFitter.aspectRatio = sprite.rect.width / sprite.rect.height;
     }
 
     private Color GetGlobalTabSurfaceColor(GlobalTabState tabState)
@@ -1027,8 +1107,8 @@ public class MainTabController : MonoBehaviour
         currentGlobalTabState = tabState;
         ApplyGlobalTabSurfaceState();
         EnsureGlobalTabPlaceholderPanel();
-        SetActiveIfPresent(combatPanel, true);
-        SetActiveIfPresent(infoPanel, true);
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
@@ -1053,7 +1133,7 @@ public class MainTabController : MonoBehaviour
         StretchToParent(globalTabPlaceholderPanel.GetComponent<RectTransform>());
 
         Image image = globalTabPlaceholderPanel.GetComponent<Image>();
-        image.color = new Color(0.02f, 0.024f, 0.032f, 0.68f);
+        image.color = new Color(0.02f, 0.024f, 0.032f, 0f);
         image.raycastTarget = false;
 
         globalTabPlaceholderTitle = EnsurePlaceholderText(
