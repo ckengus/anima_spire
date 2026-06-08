@@ -26,6 +26,13 @@ public class MainTabController : MonoBehaviour
         Shop
     }
 
+    private enum EquipmentEntryContext
+    {
+        None,
+        HeroTab,
+        LaboratoryWardrobe
+    }
+
     [SerializeField] private GameObject headerPanel;
     [SerializeField] private GameObject combatPanel;
     [SerializeField] private GameObject infoPanel;
@@ -39,6 +46,7 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private EquipmentManager equipmentManager;
     [SerializeField] private ProgressSaveManager progressSaveManager;
     [SerializeField] private Sprite heroTabBackgroundSprite;
+    [SerializeField] private Sprite laboratoryTabBackgroundSprite;
     [SerializeField] private Sprite guildTabBackgroundSprite;
     [SerializeField] private Sprite shopTabBackgroundSprite;
 
@@ -48,6 +56,7 @@ public class MainTabController : MonoBehaviour
     private LaboratoryPanelUI laboratoryPanelController;
     private EquipmentSynthesisPanelUI equipmentSynthesisPanelController;
     private GlobalTabState currentGlobalTabState = GlobalTabState.Combat;
+    private EquipmentEntryContext currentEquipmentEntryContext = EquipmentEntryContext.None;
     private GameObject globalTabSurfaceRoot;
     private Image globalTabBackgroundSurface;
     private GameObject nonCombatPageBackgroundLayer;
@@ -84,6 +93,7 @@ public class MainTabController : MonoBehaviour
 
     public void ShowBattle()
     {
+        currentEquipmentEntryContext = EquipmentEntryContext.None;
         currentGlobalTabState = GlobalTabState.Combat;
         ApplyGlobalTabSurfaceState();
         HideGlobalTabPlaceholder();
@@ -99,13 +109,31 @@ public class MainTabController : MonoBehaviour
 
     public void ShowEquipment()
     {
-        ShowWardrobe();
+        ShowEquipment(EquipmentEntryContext.HeroTab);
     }
 
     public void ShowWardrobe()
     {
-        SetActiveIfPresent(combatPanel, true);
-        SetActiveIfPresent(infoPanel, true);
+        ShowEquipment(EquipmentEntryContext.LaboratoryWardrobe);
+    }
+
+    private void ShowEquipment(EquipmentEntryContext entryContext)
+    {
+        currentEquipmentEntryContext = entryContext;
+
+        if (entryContext == EquipmentEntryContext.HeroTab)
+        {
+            currentGlobalTabState = GlobalTabState.Hero;
+        }
+        else if (entryContext == EquipmentEntryContext.LaboratoryWardrobe)
+        {
+            currentGlobalTabState = GlobalTabState.Laboratory;
+        }
+
+        ApplyGlobalTabSurfaceState();
+        HideGlobalTabPlaceholder();
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, true);
         SetActiveIfPresent(equipmentPanel, true);
         laboratoryPanelController?.HidePanel();
@@ -116,11 +144,12 @@ public class MainTabController : MonoBehaviour
 
     public void ShowLaboratory()
     {
+        currentEquipmentEntryContext = EquipmentEntryContext.None;
         currentGlobalTabState = GlobalTabState.Laboratory;
         ApplyGlobalTabSurfaceState();
         HideGlobalTabPlaceholder();
-        SetActiveIfPresent(combatPanel, true);
-        SetActiveIfPresent(infoPanel, true);
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
@@ -133,8 +162,11 @@ public class MainTabController : MonoBehaviour
 
     public void ShowSynthesisRoom()
     {
-        SetActiveIfPresent(combatPanel, true);
-        SetActiveIfPresent(infoPanel, true);
+        currentGlobalTabState = GlobalTabState.Laboratory;
+        ApplyGlobalTabSurfaceState();
+        HideGlobalTabPlaceholder();
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
@@ -513,7 +545,7 @@ public class MainTabController : MonoBehaviour
             return;
         }
 
-        if (currentGlobalTabState == GlobalTabState.Combat || currentGlobalTabState == GlobalTabState.Laboratory)
+        if (currentGlobalTabState == GlobalTabState.Combat)
         {
             SetNonCombatPageBackgroundSprite(null);
             SetNonCombatPageBackgroundVisible(false);
@@ -599,12 +631,13 @@ public class MainTabController : MonoBehaviour
         {
             case GlobalTabState.Hero:
                 return heroTabBackgroundSprite;
+            case GlobalTabState.Laboratory:
+                return laboratoryTabBackgroundSprite;
             case GlobalTabState.Guild:
                 return guildTabBackgroundSprite;
             case GlobalTabState.Shop:
                 return shopTabBackgroundSprite;
             case GlobalTabState.Combat:
-            case GlobalTabState.Laboratory:
             default:
                 return null;
         }
@@ -1446,7 +1479,8 @@ public class MainTabController : MonoBehaviour
         if (image != null)
         {
             image.color = new Color(0.06f, 0.075f, 0.1f, 0.98f);
-            image.raycastTarget = true;
+            image.enabled = false;
+            image.raycastTarget = false;
         }
 
         if (!laboratoryPanel.TryGetComponent(out LaboratoryPanelUI controller))
