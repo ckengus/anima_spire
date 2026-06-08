@@ -692,6 +692,7 @@ MonoBehaviour:
   laboratoryTabBackgroundSprite: {fileID: 21300000, guid: 74e2d5b12af728f4ebdf84950db9efcd, type: 3}
   guildTabBackgroundSprite: {fileID: 21300000, guid: 25bf111d08e79cf4890712471f1fb4f1, type: 3}
   shopTabBackgroundSprite: {fileID: 21300000, guid: b9f6e98e06899ba4c8d8bcba87578c5e, type: 3}
+  bottomGlobalTabBackgroundSprite: {fileID: 21300000, guid: 910cf5fc0b451ca4ba7132ff3ae8eeff, type: 3}
 --- !u!1 &100032100
 GameObject:
   m_ObjectHideFlags: 0

@@ -49,6 +49,7 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private Sprite laboratoryTabBackgroundSprite;
     [SerializeField] private Sprite guildTabBackgroundSprite;
     [SerializeField] private Sprite shopTabBackgroundSprite;
+    [SerializeField] private Sprite bottomGlobalTabBackgroundSprite;
 
     private RectTransform combatHudRectTransform;
     private RectTransform equipmentPanelRectTransform;
@@ -985,7 +986,20 @@ public class MainTabController : MonoBehaviour
         rectTransform.offsetMax = Vector2.zero;
 
         Image image = backgroundObject.GetComponent<Image>();
-        image.color = new Color(0.02f, 0.025f, 0.035f, 0.92f);
+        if (bottomGlobalTabBackgroundSprite != null)
+        {
+            image.sprite = bottomGlobalTabBackgroundSprite;
+            image.type = bottomGlobalTabBackgroundSprite.border != Vector4.zero
+                ? Image.Type.Sliced
+                : Image.Type.Simple;
+            image.color = Color.white;
+            image.preserveAspect = false;
+        }
+        else
+        {
+            image.color = new Color(0.02f, 0.025f, 0.035f, 0.92f);
+        }
+
         image.raycastTarget = false;
 
         backgroundObject.transform.SetAsFirstSibling();
