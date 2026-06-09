@@ -16,6 +16,7 @@ public class MainTabController : MonoBehaviour
     private const float TabContentHudGap = 16f;
     private const float GlobalTabButtonWidth = 82f;
     private const float GlobalTabButtonHeight = 72f;
+    private const float GlobalTabIconSize = 68f;
 
     private enum GlobalTabState
     {
@@ -50,6 +51,11 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private Sprite guildTabBackgroundSprite;
     [SerializeField] private Sprite shopTabBackgroundSprite;
     [SerializeField] private Sprite bottomGlobalTabBackgroundSprite;
+    [SerializeField] private Sprite globalTabCombatIconSprite;
+    [SerializeField] private Sprite globalTabHeroIconSprite;
+    [SerializeField] private Sprite globalTabLaboratoryIconSprite;
+    [SerializeField] private Sprite globalTabGuildIconSprite;
+    [SerializeField] private Sprite globalTabShopIconSprite;
 
     private RectTransform combatHudRectTransform;
     private RectTransform equipmentPanelRectTransform;
@@ -954,18 +960,12 @@ public class MainTabController : MonoBehaviour
 
         EnsureTabBarBackground(bottomGlobalTabArea.transform);
         Transform iconRow = EnsureGlobalTabIconRow(bottomGlobalTabArea.transform);
-        ClearChildren(iconRow);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_Left");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Combat", "Label_Combat", "\uC804\uD22C", new Color(0.72f, 0.18f, 0.18f, 0.96f), ShowBattle);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_01");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Hero", "Label_Hero", "\uC601\uC6C5", new Color(0.2f, 0.23f, 0.3f, 0.96f), ShowHeroTabPlaceholder);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_02");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Laboratory", "Label_Laboratory", "\uC5F0\uAD6C\uC2E4", new Color(0.18f, 0.36f, 0.68f, 0.96f), ShowLaboratory);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_03");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Guild", "Label_Guild", "\uD559\uD68C", new Color(0.22f, 0.25f, 0.32f, 0.96f), ShowGuildTabPlaceholder);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_04");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Shop", "Label_Shop", "\uC0C1\uC810", new Color(0.25f, 0.28f, 0.34f, 0.96f), ShowShopTabPlaceholder);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_Right");
+        DisableGlobalTabSpacers(iconRow);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Combat", "Label_Combat", globalTabCombatIconSprite, 0.14f, ShowBattle);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Hero", "Label_Hero", globalTabHeroIconSprite, 0.32f, ShowHeroTabPlaceholder);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Laboratory", "Label_Laboratory", globalTabLaboratoryIconSprite, 0.5f, ShowLaboratory);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Guild", "Label_Guild", globalTabGuildIconSprite, 0.68f, ShowGuildTabPlaceholder);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Shop", "Label_Shop", globalTabShopIconSprite, 0.86f, ShowShopTabPlaceholder);
 
         iconRow.SetAsLastSibling();
         SetBottomMenuAsLastSibling();
@@ -1020,81 +1020,115 @@ public class MainTabController : MonoBehaviour
         rectTransform.offsetMax = Vector2.zero;
 
         HorizontalLayoutGroup layoutGroup = rowObject.GetComponent<HorizontalLayoutGroup>();
-        if (layoutGroup == null)
+        if (layoutGroup != null)
         {
-            layoutGroup = rowObject.AddComponent<HorizontalLayoutGroup>();
+            layoutGroup.enabled = false;
         }
 
-        layoutGroup.padding = new RectOffset(12, 12, 8, 8);
-        layoutGroup.spacing = 0f;
-        layoutGroup.childAlignment = TextAnchor.MiddleCenter;
-        layoutGroup.childControlWidth = true;
-        layoutGroup.childControlHeight = true;
-        layoutGroup.childForceExpandWidth = false;
-        layoutGroup.childForceExpandHeight = false;
+        ContentSizeFitter contentSizeFitter = rowObject.GetComponent<ContentSizeFitter>();
+        if (contentSizeFitter != null)
+        {
+            contentSizeFitter.enabled = false;
+        }
+
+        LayoutElement layoutElement = rowObject.GetComponent<LayoutElement>();
+        if (layoutElement != null)
+        {
+            layoutElement.enabled = false;
+        }
 
         return rowObject.transform;
     }
 
-    private void ClearChildren(Transform parent)
+    private void DisableGlobalTabSpacers(Transform parent)
     {
         for (int i = parent.childCount - 1; i >= 0; i--)
         {
             Transform child = parent.GetChild(i);
-            child.SetParent(null, false);
-            Destroy(child.gameObject);
+            if (child.name.StartsWith("GlobalTabSpacer_") || child.name.StartsWith("Spacer_"))
+            {
+                child.gameObject.SetActive(false);
+            }
         }
     }
 
-    private GameObject EnsureGlobalTabSpacer(Transform parent, string objectName)
+    private Button EnsureGlobalTabCard(Transform parent, string objectName, string labelObjectName, Sprite iconSprite, float anchorX, UnityEngine.Events.UnityAction onClick)
     {
-        GameObject spacerObject = new GameObject(objectName, typeof(RectTransform), typeof(LayoutElement));
-        spacerObject.transform.SetParent(parent, false);
+        Transform existing = parent.Find(objectName);
+        bool isNewObject = existing == null;
+        GameObject buttonObject = isNewObject
+            ? new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button))
+            : existing.gameObject;
+        if (buttonObject.transform.parent != parent)
+        {
+            buttonObject.transform.SetParent(parent, false);
+        }
 
-        LayoutElement layoutElement = spacerObject.GetComponent<LayoutElement>();
-        layoutElement.minWidth = 0f;
-        layoutElement.preferredWidth = 0f;
-        layoutElement.flexibleWidth = 1f;
-        layoutElement.flexibleHeight = 0f;
-
-        return spacerObject;
-    }
-
-    private Button EnsureGlobalTabCard(Transform parent, string objectName, string labelObjectName, string label, Color color, UnityEngine.Events.UnityAction onClick)
-    {
-        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button), typeof(LayoutElement));
-        buttonObject.transform.SetParent(parent, false);
+        RemoveGlobalTabCardUnsupportedComponents(buttonObject);
 
         RectTransform rectTransform = buttonObject.GetComponent<RectTransform>();
-        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-        rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        rectTransform.sizeDelta = new Vector2(GlobalTabButtonWidth, GlobalTabButtonHeight);
-
-        LayoutElement layoutElement = buttonObject.GetComponent<LayoutElement>();
-        layoutElement.minWidth = GlobalTabButtonWidth;
-        layoutElement.preferredWidth = GlobalTabButtonWidth;
-        layoutElement.minHeight = GlobalTabButtonHeight;
-        layoutElement.preferredHeight = GlobalTabButtonHeight;
-        layoutElement.flexibleWidth = 0f;
-        layoutElement.flexibleHeight = 0f;
+        if (isNewObject)
+        {
+            rectTransform.anchorMin = new Vector2(anchorX, 0.5f);
+            rectTransform.anchorMax = new Vector2(anchorX, 0.5f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.anchoredPosition = Vector2.zero;
+            rectTransform.sizeDelta = new Vector2(GlobalTabIconSize, GlobalTabIconSize);
+        }
 
         Image image = buttonObject.GetComponent<Image>();
-        image.color = color;
+        if (image == null)
+        {
+            image = buttonObject.AddComponent<Image>();
+        }
+
+        image.sprite = iconSprite;
+        image.color = Color.white;
         image.raycastTarget = true;
+        image.preserveAspect = true;
 
         Button button = buttonObject.GetComponent<Button>();
+        if (button == null)
+        {
+            button = buttonObject.AddComponent<Button>();
+        }
+
         button.targetGraphic = image;
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(onClick);
 
-        Text text = EnsureGlobalTabLabel(buttonObject.transform, labelObjectName, label);
-        text.text = label;
-        text.fontSize = 18;
-        text.resizeTextMinSize = 12;
-        text.resizeTextMaxSize = 18;
+        HideGlobalTabLabel(buttonObject.transform, labelObjectName);
 
         return button;
+    }
+
+    private void RemoveGlobalTabCardUnsupportedComponents(GameObject buttonObject)
+    {
+        RemoveComponentIfPresent<StandaloneInputModule>(buttonObject);
+        RemoveComponentIfPresent<EventSystem>(buttonObject);
+        RemoveComponentIfPresent<InputSystemUIInputModule>(buttonObject);
+        RemoveComponentIfPresent<LayoutElement>(buttonObject);
+    }
+
+    private void RemoveComponentIfPresent<T>(GameObject target) where T : Component
+    {
+        T component = target.GetComponent<T>();
+        if (component != null)
+        {
+            Destroy(component);
+        }
+    }
+
+    private void HideGlobalTabLabel(Transform buttonTransform, string objectName)
+    {
+        for (int i = 0; i < buttonTransform.childCount; i++)
+        {
+            Transform child = buttonTransform.GetChild(i);
+            if (child.name == objectName || child.name.StartsWith("Label_"))
+            {
+                child.gameObject.SetActive(false);
+            }
+        }
     }
 
     private Text EnsureGlobalTabLabel(Transform buttonTransform, string objectName, string label)
@@ -1254,12 +1288,69 @@ public class MainTabController : MonoBehaviour
 
     private void EnsureEventSystem()
     {
-        if (EventSystem.current != null)
+        EventSystem[] eventSystems = Object.FindObjectsByType<EventSystem>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        EventSystem primaryEventSystem = null;
+
+        for (int i = 0; i < eventSystems.Length; i++)
         {
-            return;
+            EventSystem eventSystem = eventSystems[i];
+            if (eventSystem == null)
+            {
+                continue;
+            }
+
+            if (primaryEventSystem == null || eventSystem.gameObject.activeInHierarchy)
+            {
+                primaryEventSystem = eventSystem;
+            }
+
+            if (eventSystem.gameObject.activeInHierarchy)
+            {
+                break;
+            }
         }
 
-        new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+        if (primaryEventSystem == null)
+        {
+            GameObject eventSystemObject = new GameObject("EventSystem", typeof(EventSystem));
+            primaryEventSystem = eventSystemObject.GetComponent<EventSystem>();
+        }
+        else
+        {
+            primaryEventSystem.gameObject.SetActive(true);
+        }
+
+        DisableStandaloneInputModule(primaryEventSystem.gameObject);
+        InputSystemUIInputModule inputSystemModule = primaryEventSystem.GetComponent<InputSystemUIInputModule>();
+        if (inputSystemModule == null)
+        {
+            inputSystemModule = primaryEventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+        }
+
+        inputSystemModule.enabled = true;
+
+        for (int i = 0; i < eventSystems.Length; i++)
+        {
+            EventSystem eventSystem = eventSystems[i];
+            if (eventSystem == null || eventSystem == primaryEventSystem)
+            {
+                continue;
+            }
+
+            DisableStandaloneInputModule(eventSystem.gameObject);
+            eventSystem.gameObject.SetActive(false);
+        }
+    }
+
+    private void DisableStandaloneInputModule(GameObject eventSystemObject)
+    {
+        StandaloneInputModule standaloneInputModule = eventSystemObject.GetComponent<StandaloneInputModule>();
+        if (standaloneInputModule != null)
+        {
+            standaloneInputModule.enabled = false;
+        }
     }
 
     private Button EnsureButton(string objectName, string label, UnityEngine.Events.UnityAction onClick)

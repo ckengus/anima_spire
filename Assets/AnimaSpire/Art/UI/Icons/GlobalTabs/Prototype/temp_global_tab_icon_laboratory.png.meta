@@ -1,16 +1,16 @@
 fileFormatVersion: 2
-guid: 7a209392308ff2849aa9da2ad9cd41e3
+guid: c5591b8f3e0ec8544a29a81682a41cfb
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -67593781853211183
-    second: temp_global_tab_icon_shop_0
+      213: -8924835841315868202
+    second: temp_global_tab_icon_laboratory_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
     mipMapMode: 0
     enableMipMap: 0
-    sRGBTexture: 1
+    sRGBTexture: 0
     linearTexture: 0
     fadeOut: 0
     borderMipMap: 0
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: temp_global_tab_icon_shop_0
+      name: temp_global_tab_icon_laboratory_0
       rect:
         serializedVersion: 2
         x: 3
-        y: 8
+        y: 0
         width: 247
-        height: 236
+        height: 250
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 1d53d9340dbdf0ff0800000000000000
-      internalID: -67593781853211183
+      spriteID: 6d171bf861d942480800000000000000
+      internalID: -8924835841315868202
       vertices: []
       indices: 
       edges: []
@@ -151,7 +151,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      temp_global_tab_icon_shop_0: -67593781853211183
+      temp_global_tab_icon_laboratory_0: -8924835841315868202
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
