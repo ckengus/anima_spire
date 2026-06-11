@@ -16,6 +16,7 @@ public class MainTabController : MonoBehaviour
     private const float TabContentHudGap = 16f;
     private const float GlobalTabButtonWidth = 82f;
     private const float GlobalTabButtonHeight = 72f;
+    private const float GlobalTabIconSize = 68f;
 
     private enum GlobalTabState
     {
@@ -24,6 +25,13 @@ public class MainTabController : MonoBehaviour
         Laboratory,
         Guild,
         Shop
+    }
+
+    private enum EquipmentEntryContext
+    {
+        None,
+        HeroTab,
+        LaboratoryWardrobe
     }
 
     [SerializeField] private GameObject headerPanel;
@@ -38,6 +46,16 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private Transform equipmentRootTarget;
     [SerializeField] private EquipmentManager equipmentManager;
     [SerializeField] private ProgressSaveManager progressSaveManager;
+    [SerializeField] private Sprite heroTabBackgroundSprite;
+    [SerializeField] private Sprite laboratoryTabBackgroundSprite;
+    [SerializeField] private Sprite guildTabBackgroundSprite;
+    [SerializeField] private Sprite shopTabBackgroundSprite;
+    [SerializeField] private Sprite bottomGlobalTabBackgroundSprite;
+    [SerializeField] private Sprite globalTabCombatIconSprite;
+    [SerializeField] private Sprite globalTabHeroIconSprite;
+    [SerializeField] private Sprite globalTabLaboratoryIconSprite;
+    [SerializeField] private Sprite globalTabGuildIconSprite;
+    [SerializeField] private Sprite globalTabShopIconSprite;
 
     private RectTransform combatHudRectTransform;
     private RectTransform equipmentPanelRectTransform;
@@ -45,13 +63,17 @@ public class MainTabController : MonoBehaviour
     private LaboratoryPanelUI laboratoryPanelController;
     private EquipmentSynthesisPanelUI equipmentSynthesisPanelController;
     private GlobalTabState currentGlobalTabState = GlobalTabState.Combat;
+    private EquipmentEntryContext currentEquipmentEntryContext = EquipmentEntryContext.None;
     private GameObject globalTabSurfaceRoot;
     private Image globalTabBackgroundSurface;
     private GameObject nonCombatPageBackgroundLayer;
     private Image nonCombatPageBackgroundImage;
+    private AspectRatioFitter nonCombatPageBackgroundAspectFitter;
     private GameObject globalTabPlaceholderPanel;
     private Text globalTabPlaceholderTitle;
     private Text globalTabPlaceholderMessage;
+    private GameObject modalDim;
+    private GameObject preparingModal;
 
     private void Awake()
     {
@@ -68,6 +90,7 @@ public class MainTabController : MonoBehaviour
         EnsureBottomMenuButtons();
         EnsureLaboratoryPanel();
         EnsureEquipmentSynthesisPanel();
+        EnsurePreparingModal();
         SetGlobalFrameSiblingOrder();
         ShowBattle();
     }
@@ -80,6 +103,7 @@ public class MainTabController : MonoBehaviour
 
     public void ShowBattle()
     {
+        currentEquipmentEntryContext = EquipmentEntryContext.None;
         currentGlobalTabState = GlobalTabState.Combat;
         ApplyGlobalTabSurfaceState();
         HideGlobalTabPlaceholder();
@@ -95,13 +119,31 @@ public class MainTabController : MonoBehaviour
 
     public void ShowEquipment()
     {
-        ShowWardrobe();
+        ShowEquipment(EquipmentEntryContext.HeroTab);
     }
 
     public void ShowWardrobe()
     {
-        SetActiveIfPresent(combatPanel, true);
-        SetActiveIfPresent(infoPanel, true);
+        ShowEquipment(EquipmentEntryContext.LaboratoryWardrobe);
+    }
+
+    private void ShowEquipment(EquipmentEntryContext entryContext)
+    {
+        currentEquipmentEntryContext = entryContext;
+
+        if (entryContext == EquipmentEntryContext.HeroTab)
+        {
+            currentGlobalTabState = GlobalTabState.Hero;
+        }
+        else if (entryContext == EquipmentEntryContext.LaboratoryWardrobe)
+        {
+            currentGlobalTabState = GlobalTabState.Laboratory;
+        }
+
+        ApplyGlobalTabSurfaceState();
+        HideGlobalTabPlaceholder();
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, true);
         SetActiveIfPresent(equipmentPanel, true);
         laboratoryPanelController?.HidePanel();
@@ -112,11 +154,12 @@ public class MainTabController : MonoBehaviour
 
     public void ShowLaboratory()
     {
+        currentEquipmentEntryContext = EquipmentEntryContext.None;
         currentGlobalTabState = GlobalTabState.Laboratory;
         ApplyGlobalTabSurfaceState();
         HideGlobalTabPlaceholder();
-        SetActiveIfPresent(combatPanel, true);
-        SetActiveIfPresent(infoPanel, true);
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
@@ -129,8 +172,11 @@ public class MainTabController : MonoBehaviour
 
     public void ShowSynthesisRoom()
     {
-        SetActiveIfPresent(combatPanel, true);
-        SetActiveIfPresent(infoPanel, true);
+        currentGlobalTabState = GlobalTabState.Laboratory;
+        ApplyGlobalTabSurfaceState();
+        HideGlobalTabPlaceholder();
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
@@ -466,6 +512,7 @@ public class MainTabController : MonoBehaviour
 
         nonCombatPageBackgroundImage = backgroundImageObject.GetComponent<Image>();
         nonCombatPageBackgroundImage.raycastTarget = false;
+        EnsureNonCombatPageBackgroundAspectFitter();
 
         if (globalTabBackgroundSurface != null)
         {
@@ -503,15 +550,34 @@ public class MainTabController : MonoBehaviour
     {
         EnsureGlobalTabSurfaceRootIfMissing();
 
-        if (nonCombatPageBackgroundImage == null)
+        if (globalTabSurfaceRoot == null || nonCombatPageBackgroundImage == null)
         {
             return;
         }
 
-        bool showBackground = currentGlobalTabState != GlobalTabState.Combat;
+        if (currentGlobalTabState == GlobalTabState.Combat)
+        {
+            SetNonCombatPageBackgroundSprite(null);
+            SetNonCombatPageBackgroundVisible(false);
+            globalTabSurfaceRoot.SetActive(false);
+            return;
+        }
+
+        Sprite backgroundSprite = GetGlobalTabBackgroundSprite(currentGlobalTabState);
+        bool showBackground = backgroundSprite != null;
+
         globalTabSurfaceRoot.SetActive(showBackground);
         SetNonCombatPageBackgroundVisible(showBackground);
-        SetNonCombatPageBackgroundColor(GetGlobalTabSurfaceColor(currentGlobalTabState));
+
+        if (showBackground)
+        {
+            SetNonCombatPageBackgroundSprite(backgroundSprite);
+        }
+        else
+        {
+            SetNonCombatPageBackgroundSprite(null);
+            SetNonCombatPageBackgroundColor(GetGlobalTabSurfaceColor(currentGlobalTabState));
+        }
     }
 
     private void EnsureGlobalTabSurfaceRootIfMissing()
@@ -561,8 +627,65 @@ public class MainTabController : MonoBehaviour
         }
 
         nonCombatPageBackgroundImage.sprite = sprite;
+        nonCombatPageBackgroundImage.type = Image.Type.Simple;
+        nonCombatPageBackgroundImage.color = Color.white;
         nonCombatPageBackgroundImage.preserveAspect = false;
         nonCombatPageBackgroundImage.raycastTarget = false;
+        nonCombatPageBackgroundImage.enabled = sprite != null;
+        UpdateNonCombatPageBackgroundAspectRatio(sprite);
+    }
+
+    private Sprite GetGlobalTabBackgroundSprite(GlobalTabState tabState)
+    {
+        switch (tabState)
+        {
+            case GlobalTabState.Hero:
+                return heroTabBackgroundSprite;
+            case GlobalTabState.Laboratory:
+                return laboratoryTabBackgroundSprite;
+            case GlobalTabState.Guild:
+                return guildTabBackgroundSprite;
+            case GlobalTabState.Shop:
+                return shopTabBackgroundSprite;
+            case GlobalTabState.Combat:
+            default:
+                return null;
+        }
+    }
+
+    private void EnsureNonCombatPageBackgroundAspectFitter()
+    {
+        if (nonCombatPageBackgroundImage == null)
+        {
+            return;
+        }
+
+        RectTransform rectTransform = nonCombatPageBackgroundImage.rectTransform;
+        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.localScale = Vector3.one;
+
+        nonCombatPageBackgroundAspectFitter = nonCombatPageBackgroundImage.GetComponent<AspectRatioFitter>();
+        if (nonCombatPageBackgroundAspectFitter == null)
+        {
+            nonCombatPageBackgroundAspectFitter = nonCombatPageBackgroundImage.gameObject.AddComponent<AspectRatioFitter>();
+        }
+
+        nonCombatPageBackgroundAspectFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+    }
+
+    private void UpdateNonCombatPageBackgroundAspectRatio(Sprite sprite)
+    {
+        EnsureNonCombatPageBackgroundAspectFitter();
+
+        if (nonCombatPageBackgroundAspectFitter == null || sprite == null || sprite.rect.height <= 0f)
+        {
+            return;
+        }
+
+        nonCombatPageBackgroundAspectFitter.aspectRatio = sprite.rect.width / sprite.rect.height;
     }
 
     private Color GetGlobalTabSurfaceColor(GlobalTabState tabState)
@@ -840,18 +963,12 @@ public class MainTabController : MonoBehaviour
 
         EnsureTabBarBackground(bottomGlobalTabArea.transform);
         Transform iconRow = EnsureGlobalTabIconRow(bottomGlobalTabArea.transform);
-        ClearChildren(iconRow);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_Left");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Combat", "Label_Combat", "\uC804\uD22C", new Color(0.72f, 0.18f, 0.18f, 0.96f), ShowBattle);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_01");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Hero", "Label_Hero", "\uC601\uC6C5", new Color(0.2f, 0.23f, 0.3f, 0.96f), ShowHeroTabPlaceholder);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_02");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Laboratory", "Label_Laboratory", "\uC5F0\uAD6C\uC2E4", new Color(0.18f, 0.36f, 0.68f, 0.96f), ShowLaboratory);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_03");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Guild", "Label_Guild", "\uD559\uD68C", new Color(0.22f, 0.25f, 0.32f, 0.96f), ShowGuildTabPlaceholder);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_04");
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Shop", "Label_Shop", "\uC0C1\uC810", new Color(0.25f, 0.28f, 0.34f, 0.96f), ShowShopTabPlaceholder);
-        EnsureGlobalTabSpacer(iconRow, "GlobalTabSpacer_Right");
+        DisableGlobalTabSpacers(iconRow);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Combat", "Label_Combat", globalTabCombatIconSprite, 0.14f, ShowBattle);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Hero", "Label_Hero", globalTabHeroIconSprite, 0.32f, ShowHeroTabPlaceholder);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Laboratory", "Label_Laboratory", globalTabLaboratoryIconSprite, 0.5f, ShowLaboratory);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Guild", "Label_Guild", globalTabGuildIconSprite, 0.68f, ShowGuildTabPlaceholder);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Shop", "Label_Shop", globalTabShopIconSprite, 0.86f, ShowShopTabPlaceholder);
 
         iconRow.SetAsLastSibling();
         SetBottomMenuAsLastSibling();
@@ -872,7 +989,20 @@ public class MainTabController : MonoBehaviour
         rectTransform.offsetMax = Vector2.zero;
 
         Image image = backgroundObject.GetComponent<Image>();
-        image.color = new Color(0.02f, 0.025f, 0.035f, 0.92f);
+        if (bottomGlobalTabBackgroundSprite != null)
+        {
+            image.sprite = bottomGlobalTabBackgroundSprite;
+            image.type = bottomGlobalTabBackgroundSprite.border != Vector4.zero
+                ? Image.Type.Sliced
+                : Image.Type.Simple;
+            image.color = Color.white;
+            image.preserveAspect = false;
+        }
+        else
+        {
+            image.color = new Color(0.02f, 0.025f, 0.035f, 0.92f);
+        }
+
         image.raycastTarget = false;
 
         backgroundObject.transform.SetAsFirstSibling();
@@ -893,81 +1023,115 @@ public class MainTabController : MonoBehaviour
         rectTransform.offsetMax = Vector2.zero;
 
         HorizontalLayoutGroup layoutGroup = rowObject.GetComponent<HorizontalLayoutGroup>();
-        if (layoutGroup == null)
+        if (layoutGroup != null)
         {
-            layoutGroup = rowObject.AddComponent<HorizontalLayoutGroup>();
+            layoutGroup.enabled = false;
         }
 
-        layoutGroup.padding = new RectOffset(12, 12, 8, 8);
-        layoutGroup.spacing = 0f;
-        layoutGroup.childAlignment = TextAnchor.MiddleCenter;
-        layoutGroup.childControlWidth = true;
-        layoutGroup.childControlHeight = true;
-        layoutGroup.childForceExpandWidth = false;
-        layoutGroup.childForceExpandHeight = false;
+        ContentSizeFitter contentSizeFitter = rowObject.GetComponent<ContentSizeFitter>();
+        if (contentSizeFitter != null)
+        {
+            contentSizeFitter.enabled = false;
+        }
+
+        LayoutElement layoutElement = rowObject.GetComponent<LayoutElement>();
+        if (layoutElement != null)
+        {
+            layoutElement.enabled = false;
+        }
 
         return rowObject.transform;
     }
 
-    private void ClearChildren(Transform parent)
+    private void DisableGlobalTabSpacers(Transform parent)
     {
         for (int i = parent.childCount - 1; i >= 0; i--)
         {
             Transform child = parent.GetChild(i);
-            child.SetParent(null, false);
-            Destroy(child.gameObject);
+            if (child.name.StartsWith("GlobalTabSpacer_") || child.name.StartsWith("Spacer_"))
+            {
+                child.gameObject.SetActive(false);
+            }
         }
     }
 
-    private GameObject EnsureGlobalTabSpacer(Transform parent, string objectName)
+    private Button EnsureGlobalTabCard(Transform parent, string objectName, string labelObjectName, Sprite iconSprite, float anchorX, UnityEngine.Events.UnityAction onClick)
     {
-        GameObject spacerObject = new GameObject(objectName, typeof(RectTransform), typeof(LayoutElement));
-        spacerObject.transform.SetParent(parent, false);
+        Transform existing = parent.Find(objectName);
+        bool isNewObject = existing == null;
+        GameObject buttonObject = isNewObject
+            ? new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button))
+            : existing.gameObject;
+        if (buttonObject.transform.parent != parent)
+        {
+            buttonObject.transform.SetParent(parent, false);
+        }
 
-        LayoutElement layoutElement = spacerObject.GetComponent<LayoutElement>();
-        layoutElement.minWidth = 0f;
-        layoutElement.preferredWidth = 0f;
-        layoutElement.flexibleWidth = 1f;
-        layoutElement.flexibleHeight = 0f;
-
-        return spacerObject;
-    }
-
-    private Button EnsureGlobalTabCard(Transform parent, string objectName, string labelObjectName, string label, Color color, UnityEngine.Events.UnityAction onClick)
-    {
-        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button), typeof(LayoutElement));
-        buttonObject.transform.SetParent(parent, false);
+        RemoveGlobalTabCardUnsupportedComponents(buttonObject);
 
         RectTransform rectTransform = buttonObject.GetComponent<RectTransform>();
-        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-        rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        rectTransform.sizeDelta = new Vector2(GlobalTabButtonWidth, GlobalTabButtonHeight);
-
-        LayoutElement layoutElement = buttonObject.GetComponent<LayoutElement>();
-        layoutElement.minWidth = GlobalTabButtonWidth;
-        layoutElement.preferredWidth = GlobalTabButtonWidth;
-        layoutElement.minHeight = GlobalTabButtonHeight;
-        layoutElement.preferredHeight = GlobalTabButtonHeight;
-        layoutElement.flexibleWidth = 0f;
-        layoutElement.flexibleHeight = 0f;
+        if (isNewObject)
+        {
+            rectTransform.anchorMin = new Vector2(anchorX, 0.5f);
+            rectTransform.anchorMax = new Vector2(anchorX, 0.5f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.anchoredPosition = Vector2.zero;
+            rectTransform.sizeDelta = new Vector2(GlobalTabIconSize, GlobalTabIconSize);
+        }
 
         Image image = buttonObject.GetComponent<Image>();
-        image.color = color;
+        if (image == null)
+        {
+            image = buttonObject.AddComponent<Image>();
+        }
+
+        image.sprite = iconSprite;
+        image.color = Color.white;
         image.raycastTarget = true;
+        image.preserveAspect = true;
 
         Button button = buttonObject.GetComponent<Button>();
+        if (button == null)
+        {
+            button = buttonObject.AddComponent<Button>();
+        }
+
         button.targetGraphic = image;
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(onClick);
 
-        Text text = EnsureGlobalTabLabel(buttonObject.transform, labelObjectName, label);
-        text.text = label;
-        text.fontSize = 18;
-        text.resizeTextMinSize = 12;
-        text.resizeTextMaxSize = 18;
+        HideGlobalTabLabel(buttonObject.transform, labelObjectName);
 
         return button;
+    }
+
+    private void RemoveGlobalTabCardUnsupportedComponents(GameObject buttonObject)
+    {
+        RemoveComponentIfPresent<StandaloneInputModule>(buttonObject);
+        RemoveComponentIfPresent<EventSystem>(buttonObject);
+        RemoveComponentIfPresent<InputSystemUIInputModule>(buttonObject);
+        RemoveComponentIfPresent<LayoutElement>(buttonObject);
+    }
+
+    private void RemoveComponentIfPresent<T>(GameObject target) where T : Component
+    {
+        T component = target.GetComponent<T>();
+        if (component != null)
+        {
+            Destroy(component);
+        }
+    }
+
+    private void HideGlobalTabLabel(Transform buttonTransform, string objectName)
+    {
+        for (int i = 0; i < buttonTransform.childCount; i++)
+        {
+            Transform child = buttonTransform.GetChild(i);
+            if (child.name == objectName || child.name.StartsWith("Label_"))
+            {
+                child.gameObject.SetActive(false);
+            }
+        }
     }
 
     private Text EnsureGlobalTabLabel(Transform buttonTransform, string objectName, string label)
@@ -1008,11 +1172,40 @@ public class MainTabController : MonoBehaviour
     private void ShowGuildTabPlaceholder()
     {
         ShowGlobalTabPlaceholder(GlobalTabState.Guild, "\uD559\uD68C", "\uD559\uD68C \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
+        ShowPreparingModal();
     }
 
     private void ShowShopTabPlaceholder()
     {
         ShowGlobalTabPlaceholder(GlobalTabState.Shop, "\uC0C1\uC810", "\uC0C1\uC810 \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
+        ShowPreparingModal();
+    }
+
+    public void ShowPreparingModal()
+    {
+        EnsurePreparingModal();
+        if (modalDim == null || preparingModal == null)
+        {
+            return;
+        }
+
+        modalDim.SetActive(true);
+        preparingModal.SetActive(true);
+        modalDim.transform.SetAsLastSibling();
+        preparingModal.transform.SetAsLastSibling();
+    }
+
+    public void HidePreparingModal()
+    {
+        if (preparingModal != null)
+        {
+            preparingModal.SetActive(false);
+        }
+
+        if (modalDim != null)
+        {
+            modalDim.SetActive(false);
+        }
     }
 
     private void ShowUnavailableGlobalTab(string message)
@@ -1027,8 +1220,8 @@ public class MainTabController : MonoBehaviour
         currentGlobalTabState = tabState;
         ApplyGlobalTabSurfaceState();
         EnsureGlobalTabPlaceholderPanel();
-        SetActiveIfPresent(combatPanel, true);
-        SetActiveIfPresent(infoPanel, true);
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
@@ -1053,7 +1246,7 @@ public class MainTabController : MonoBehaviour
         StretchToParent(globalTabPlaceholderPanel.GetComponent<RectTransform>());
 
         Image image = globalTabPlaceholderPanel.GetComponent<Image>();
-        image.color = new Color(0.02f, 0.024f, 0.032f, 0.68f);
+        image.color = new Color(0.02f, 0.024f, 0.032f, 0f);
         image.raycastTarget = false;
 
         globalTabPlaceholderTitle = EnsurePlaceholderText(
@@ -1108,6 +1301,162 @@ public class MainTabController : MonoBehaviour
         }
     }
 
+    private void EnsurePreparingModal()
+    {
+        Transform popupOverlay = FindPopupOverlay();
+        if (popupOverlay == null)
+        {
+            return;
+        }
+
+        modalDim = EnsureModalDim(popupOverlay);
+        preparingModal = EnsurePreparingModalCard(popupOverlay);
+
+        modalDim.SetActive(false);
+        preparingModal.SetActive(false);
+        modalDim.transform.SetAsLastSibling();
+        preparingModal.transform.SetAsLastSibling();
+    }
+
+    private GameObject EnsureModalDim(Transform popupOverlay)
+    {
+        Transform existing = popupOverlay.Find("ModalDim");
+        GameObject dimObject = existing != null
+            ? existing.gameObject
+            : new GameObject("ModalDim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        dimObject.transform.SetParent(popupOverlay, false);
+
+        RectTransform rectTransform = dimObject.GetComponent<RectTransform>();
+        StretchToParent(rectTransform);
+
+        Image image = dimObject.GetComponent<Image>();
+        image.color = new Color(0f, 0f, 0f, 0.58f);
+        image.raycastTarget = true;
+
+        return dimObject;
+    }
+
+    private GameObject EnsurePreparingModalCard(Transform popupOverlay)
+    {
+        Transform existing = popupOverlay.Find("PreparingModal");
+        GameObject modalObject = existing != null
+            ? existing.gameObject
+            : new GameObject("PreparingModal", typeof(RectTransform));
+        modalObject.transform.SetParent(popupOverlay, false);
+
+        RectTransform rectTransform = modalObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = new Vector2(520f, 300f);
+
+        GameObject cardObject = EnsureModalCardSurface(modalObject.transform);
+        EnsureModalText(cardObject.transform);
+        EnsureModalCloseButton(cardObject.transform);
+
+        return modalObject;
+    }
+
+    private GameObject EnsureModalCardSurface(Transform parent)
+    {
+        Transform existing = parent.Find("ModalCard");
+        GameObject cardObject = existing != null
+            ? existing.gameObject
+            : new GameObject("ModalCard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        cardObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = cardObject.GetComponent<RectTransform>();
+        StretchToParent(rectTransform);
+
+        Image image = cardObject.GetComponent<Image>();
+        image.color = new Color(0.11f, 0.12f, 0.16f, 0.96f);
+        image.raycastTarget = true;
+
+        return cardObject;
+    }
+
+    private Text EnsureModalText(Transform parent)
+    {
+        Transform existing = parent.Find("PreparingText");
+        GameObject textObject = existing != null
+            ? existing.gameObject
+            : new GameObject("PreparingText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.12f, 0.48f);
+        rectTransform.anchorMax = new Vector2(0.88f, 0.82f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 34;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 20;
+        text.resizeTextMaxSize = 34;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        text.text = "\uC900\uBE44\uC911\uC785\uB2C8\uB2E4";
+
+        return text;
+    }
+
+    private Button EnsureModalCloseButton(Transform parent)
+    {
+        Transform existing = parent.Find("CloseButton");
+        GameObject buttonObject = existing != null
+            ? existing.gameObject
+            : new GameObject("CloseButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        buttonObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = buttonObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.32f, 0.14f);
+        rectTransform.anchorMax = new Vector2(0.68f, 0.34f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = new Color(0.25f, 0.30f, 0.38f, 1f);
+        image.raycastTarget = true;
+
+        Button button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = image;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(HidePreparingModal);
+
+        Text text = EnsureModalButtonText(buttonObject.transform);
+        text.text = "\uD655\uC778";
+
+        return button;
+    }
+
+    private Text EnsureModalButtonText(Transform parent)
+    {
+        Transform existing = parent.Find("Text");
+        GameObject textObject = existing != null
+            ? existing.gameObject
+            : new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        StretchToParent(rectTransform);
+
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 24;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 16;
+        text.resizeTextMaxSize = 24;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.raycastTarget = false;
+
+        return text;
+    }
+
     private void EnsureBottomMenuLayout()
     {
         HorizontalLayoutGroup layoutGroup = bottomMenuPanel.GetComponent<HorizontalLayoutGroup>();
@@ -1127,12 +1476,68 @@ public class MainTabController : MonoBehaviour
 
     private void EnsureEventSystem()
     {
-        if (EventSystem.current != null)
+        EventSystem[] eventSystems = Object.FindObjectsByType<EventSystem>(
+            FindObjectsInactive.Include);
+        EventSystem primaryEventSystem = null;
+
+        for (int i = 0; i < eventSystems.Length; i++)
         {
-            return;
+            EventSystem eventSystem = eventSystems[i];
+            if (eventSystem == null)
+            {
+                continue;
+            }
+
+            if (primaryEventSystem == null || eventSystem.gameObject.activeInHierarchy)
+            {
+                primaryEventSystem = eventSystem;
+            }
+
+            if (eventSystem.gameObject.activeInHierarchy)
+            {
+                break;
+            }
         }
 
-        new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+        if (primaryEventSystem == null)
+        {
+            GameObject eventSystemObject = new GameObject("EventSystem", typeof(EventSystem));
+            primaryEventSystem = eventSystemObject.GetComponent<EventSystem>();
+        }
+        else
+        {
+            primaryEventSystem.gameObject.SetActive(true);
+        }
+
+        DisableStandaloneInputModule(primaryEventSystem.gameObject);
+        InputSystemUIInputModule inputSystemModule = primaryEventSystem.GetComponent<InputSystemUIInputModule>();
+        if (inputSystemModule == null)
+        {
+            inputSystemModule = primaryEventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+        }
+
+        inputSystemModule.enabled = true;
+
+        for (int i = 0; i < eventSystems.Length; i++)
+        {
+            EventSystem eventSystem = eventSystems[i];
+            if (eventSystem == null || eventSystem == primaryEventSystem)
+            {
+                continue;
+            }
+
+            DisableStandaloneInputModule(eventSystem.gameObject);
+            eventSystem.gameObject.SetActive(false);
+        }
+    }
+
+    private void DisableStandaloneInputModule(GameObject eventSystemObject)
+    {
+        StandaloneInputModule standaloneInputModule = eventSystemObject.GetComponent<StandaloneInputModule>();
+        if (standaloneInputModule != null)
+        {
+            standaloneInputModule.enabled = false;
+        }
     }
 
     private Button EnsureButton(string objectName, string label, UnityEngine.Events.UnityAction onClick)
@@ -1366,7 +1771,8 @@ public class MainTabController : MonoBehaviour
         if (image != null)
         {
             image.color = new Color(0.06f, 0.075f, 0.1f, 0.98f);
-            image.raycastTarget = true;
+            image.enabled = false;
+            image.raycastTarget = false;
         }
 
         if (!laboratoryPanel.TryGetComponent(out LaboratoryPanelUI controller))

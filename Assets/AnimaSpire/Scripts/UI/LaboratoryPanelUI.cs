@@ -37,6 +37,12 @@ public sealed class LaboratoryPanelUI : MonoBehaviour
 
         GameObject backgroundObject = EnsurePanel(transform, "LaboratoryBackground", new Color(0.06f, 0.075f, 0.1f, 0.98f));
         StretchToParent(backgroundObject.GetComponent<RectTransform>());
+        Image backgroundImage = backgroundObject.GetComponent<Image>();
+        if (backgroundImage != null)
+        {
+            backgroundImage.enabled = false;
+            backgroundImage.raycastTarget = false;
+        }
 
         GameObject contentObject = new GameObject("LaboratoryContent", typeof(RectTransform));
         contentObject.transform.SetParent(transform, false);
