@@ -72,6 +72,8 @@ public class MainTabController : MonoBehaviour
     private GameObject globalTabPlaceholderPanel;
     private Text globalTabPlaceholderTitle;
     private Text globalTabPlaceholderMessage;
+    private GameObject modalDim;
+    private GameObject preparingModal;
 
     private void Awake()
     {
@@ -88,6 +90,7 @@ public class MainTabController : MonoBehaviour
         EnsureBottomMenuButtons();
         EnsureLaboratoryPanel();
         EnsureEquipmentSynthesisPanel();
+        EnsurePreparingModal();
         SetGlobalFrameSiblingOrder();
         ShowBattle();
     }
@@ -1169,11 +1172,40 @@ public class MainTabController : MonoBehaviour
     private void ShowGuildTabPlaceholder()
     {
         ShowGlobalTabPlaceholder(GlobalTabState.Guild, "\uD559\uD68C", "\uD559\uD68C \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
+        ShowPreparingModal();
     }
 
     private void ShowShopTabPlaceholder()
     {
         ShowGlobalTabPlaceholder(GlobalTabState.Shop, "\uC0C1\uC810", "\uC0C1\uC810 \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
+        ShowPreparingModal();
+    }
+
+    public void ShowPreparingModal()
+    {
+        EnsurePreparingModal();
+        if (modalDim == null || preparingModal == null)
+        {
+            return;
+        }
+
+        modalDim.SetActive(true);
+        preparingModal.SetActive(true);
+        modalDim.transform.SetAsLastSibling();
+        preparingModal.transform.SetAsLastSibling();
+    }
+
+    public void HidePreparingModal()
+    {
+        if (preparingModal != null)
+        {
+            preparingModal.SetActive(false);
+        }
+
+        if (modalDim != null)
+        {
+            modalDim.SetActive(false);
+        }
     }
 
     private void ShowUnavailableGlobalTab(string message)
@@ -1269,6 +1301,162 @@ public class MainTabController : MonoBehaviour
         }
     }
 
+    private void EnsurePreparingModal()
+    {
+        Transform popupOverlay = FindPopupOverlay();
+        if (popupOverlay == null)
+        {
+            return;
+        }
+
+        modalDim = EnsureModalDim(popupOverlay);
+        preparingModal = EnsurePreparingModalCard(popupOverlay);
+
+        modalDim.SetActive(false);
+        preparingModal.SetActive(false);
+        modalDim.transform.SetAsLastSibling();
+        preparingModal.transform.SetAsLastSibling();
+    }
+
+    private GameObject EnsureModalDim(Transform popupOverlay)
+    {
+        Transform existing = popupOverlay.Find("ModalDim");
+        GameObject dimObject = existing != null
+            ? existing.gameObject
+            : new GameObject("ModalDim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        dimObject.transform.SetParent(popupOverlay, false);
+
+        RectTransform rectTransform = dimObject.GetComponent<RectTransform>();
+        StretchToParent(rectTransform);
+
+        Image image = dimObject.GetComponent<Image>();
+        image.color = new Color(0f, 0f, 0f, 0.58f);
+        image.raycastTarget = true;
+
+        return dimObject;
+    }
+
+    private GameObject EnsurePreparingModalCard(Transform popupOverlay)
+    {
+        Transform existing = popupOverlay.Find("PreparingModal");
+        GameObject modalObject = existing != null
+            ? existing.gameObject
+            : new GameObject("PreparingModal", typeof(RectTransform));
+        modalObject.transform.SetParent(popupOverlay, false);
+
+        RectTransform rectTransform = modalObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = new Vector2(520f, 300f);
+
+        GameObject cardObject = EnsureModalCardSurface(modalObject.transform);
+        EnsureModalText(cardObject.transform);
+        EnsureModalCloseButton(cardObject.transform);
+
+        return modalObject;
+    }
+
+    private GameObject EnsureModalCardSurface(Transform parent)
+    {
+        Transform existing = parent.Find("ModalCard");
+        GameObject cardObject = existing != null
+            ? existing.gameObject
+            : new GameObject("ModalCard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        cardObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = cardObject.GetComponent<RectTransform>();
+        StretchToParent(rectTransform);
+
+        Image image = cardObject.GetComponent<Image>();
+        image.color = new Color(0.11f, 0.12f, 0.16f, 0.96f);
+        image.raycastTarget = true;
+
+        return cardObject;
+    }
+
+    private Text EnsureModalText(Transform parent)
+    {
+        Transform existing = parent.Find("PreparingText");
+        GameObject textObject = existing != null
+            ? existing.gameObject
+            : new GameObject("PreparingText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.12f, 0.48f);
+        rectTransform.anchorMax = new Vector2(0.88f, 0.82f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 34;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 20;
+        text.resizeTextMaxSize = 34;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        text.text = "\uC900\uBE44\uC911\uC785\uB2C8\uB2E4";
+
+        return text;
+    }
+
+    private Button EnsureModalCloseButton(Transform parent)
+    {
+        Transform existing = parent.Find("CloseButton");
+        GameObject buttonObject = existing != null
+            ? existing.gameObject
+            : new GameObject("CloseButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        buttonObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = buttonObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0.32f, 0.14f);
+        rectTransform.anchorMax = new Vector2(0.68f, 0.34f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = new Color(0.25f, 0.30f, 0.38f, 1f);
+        image.raycastTarget = true;
+
+        Button button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = image;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(HidePreparingModal);
+
+        Text text = EnsureModalButtonText(buttonObject.transform);
+        text.text = "\uD655\uC778";
+
+        return button;
+    }
+
+    private Text EnsureModalButtonText(Transform parent)
+    {
+        Transform existing = parent.Find("Text");
+        GameObject textObject = existing != null
+            ? existing.gameObject
+            : new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        StretchToParent(rectTransform);
+
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 24;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 16;
+        text.resizeTextMaxSize = 24;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.raycastTarget = false;
+
+        return text;
+    }
+
     private void EnsureBottomMenuLayout()
     {
         HorizontalLayoutGroup layoutGroup = bottomMenuPanel.GetComponent<HorizontalLayoutGroup>();
@@ -1289,8 +1477,7 @@ public class MainTabController : MonoBehaviour
     private void EnsureEventSystem()
     {
         EventSystem[] eventSystems = Object.FindObjectsByType<EventSystem>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         EventSystem primaryEventSystem = null;
 
         for (int i = 0; i < eventSystems.Length; i++)
