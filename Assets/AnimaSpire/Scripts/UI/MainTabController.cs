@@ -17,6 +17,7 @@ public class MainTabController : MonoBehaviour
     private const float GlobalTabButtonWidth = 82f;
     private const float GlobalTabButtonHeight = 72f;
     private const float GlobalTabIconSize = 68f;
+    private const float CombatSkillSlotSize = 72f;
 
     private enum GlobalTabState
     {
@@ -85,6 +86,7 @@ public class MainTabController : MonoBehaviour
         EnsureThreeAreaLayout();
         EnsureCombatCameraFraming();
         EnsureCombatHud();
+        EnsureCombatSurfaceLayout();
         EnsureTabContentPanel();
         EnsureEquipmentPanel();
         EnsureBottomMenuButtons();
@@ -93,6 +95,11 @@ public class MainTabController : MonoBehaviour
         EnsurePreparingModal();
         SetGlobalFrameSiblingOrder();
         ShowBattle();
+    }
+
+    private void Start()
+    {
+        DisableLegacyInfoPanelHeroHpText();
     }
 
     private void OnRectTransformDimensionsChange()
@@ -888,6 +895,378 @@ public class MainTabController : MonoBehaviour
 
         combatHudRectTransform.offsetMin = new Vector2(HudHorizontalPadding, -HudSafeAreaPadding - HudHeight);
         combatHudRectTransform.offsetMax = new Vector2(-HudHorizontalPadding, -HudSafeAreaPadding);
+    }
+
+    private void EnsureCombatSurfaceLayout()
+    {
+        if (combatPanel == null)
+        {
+            return;
+        }
+
+        Transform surfaceRoot = EnsureCombatSurfaceRoot();
+        Transform sceneViewArea = EnsureCombatSurfaceArea(
+            surfaceRoot,
+            "CombatSceneViewArea",
+            new Vector2(0.02f, 0.02f),
+            new Vector2(0.98f, 0.9f));
+        EnsureCombatSurfaceImage(sceneViewArea, "CombatSceneViewSurface", new Color(0.14f, 0.18f, 0.22f, 0.16f));
+        EnsureCombatSurfaceLabel(sceneViewArea, "CombatSceneViewLabel", "Combat Scene View", new Vector2(0.04f, 0.72f), new Vector2(0.96f, 0.94f), 18);
+
+        surfaceRoot.SetAsFirstSibling();
+        combatHudRectTransform?.SetAsLastSibling();
+
+        if (infoPanel == null)
+        {
+            return;
+        }
+
+        CleanupMisplacedCombatSurfaceArea("CombatInfoArea", infoPanel.transform, surfaceRoot, combatPanel.transform);
+        CleanupMisplacedCombatSurfaceArea("CombatSkillArea", infoPanel.transform, surfaceRoot, combatPanel.transform);
+        DisableLegacyInfoPanelHeroHpText();
+
+        Transform infoArea = EnsureCombatSurfaceArea(
+            infoPanel.transform,
+            "CombatInfoArea",
+            new Vector2(0.04f, 0.28f),
+            new Vector2(0.96f, 0.96f));
+        EnsureCombatSurfaceImage(infoArea, "CombatInfoSurface", new Color(0.08f, 0.12f, 0.16f, 0.34f));
+        EnsureCombatSurfaceLabel(infoArea, "CombatInfoLabel", "Combat Info", new Vector2(0.04f, 0.18f), new Vector2(0.96f, 0.82f), 18);
+
+        Transform skillArea = EnsureCombatSurfaceArea(
+            infoPanel.transform,
+            "CombatSkillArea",
+            new Vector2(0.04f, 0.04f),
+            new Vector2(0.96f, 0.24f));
+        EnsureCombatSurfaceImage(skillArea, "CombatSkillSurface", new Color(0.08f, 0.1f, 0.13f, 0.42f));
+        EnsureCombatSurfaceLabel(skillArea, "CombatSkillLabel", "Skills", new Vector2(0.04f, 0.72f), new Vector2(0.96f, 0.96f), 16);
+
+        Transform skillButtonRow = EnsureSkillButtonRow(skillArea);
+        for (int i = 1; i <= 4; i++)
+        {
+            EnsureSkillSlot(skillButtonRow, $"SkillSlot_{i:00}");
+        }
+    }
+
+    private void DisableLegacyInfoPanelHeroHpText()
+    {
+        if (infoPanel == null)
+        {
+            return;
+        }
+
+        Transform heroHpText = infoPanel.transform.Find("HeroHpText");
+        if (heroHpText != null)
+        {
+            heroHpText.gameObject.SetActive(false);
+        }
+    }
+
+    private void CleanupMisplacedCombatSurfaceArea(string objectName, Transform targetParent, params Transform[] misplacedParents)
+    {
+        Transform target = targetParent.Find(objectName);
+
+        for (int i = 0; i < misplacedParents.Length; i++)
+        {
+            Transform misplacedParent = misplacedParents[i];
+            if (misplacedParent == null || misplacedParent == targetParent)
+            {
+                continue;
+            }
+
+            Transform misplaced = misplacedParent.Find(objectName);
+            if (misplaced == null)
+            {
+                continue;
+            }
+
+            if (target == null)
+            {
+                misplaced.SetParent(targetParent, false);
+                target = misplaced;
+            }
+            else if (misplaced != target)
+            {
+                DestroyCombatSurfaceObject(misplaced.gameObject);
+            }
+        }
+    }
+
+    private void DestroyCombatSurfaceObject(GameObject target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            Destroy(target);
+        }
+        else
+        {
+            DestroyImmediate(target);
+        }
+    }
+
+    private Transform EnsureCombatSurfaceRoot()
+    {
+        Transform existing = combatPanel.transform.Find("CombatSurfaceRoot");
+        GameObject rootObject = existing != null
+            ? existing.gameObject
+            : new GameObject("CombatSurfaceRoot", typeof(RectTransform));
+        rootObject.transform.SetParent(combatPanel.transform, false);
+
+        RectTransform rectTransform = rootObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = rootObject.AddComponent<RectTransform>();
+        }
+
+        StretchToParent(rectTransform);
+
+        return rootObject.transform;
+    }
+
+    private Transform EnsureCombatSurfaceArea(Transform parent, string objectName, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        Transform existing = parent.Find(objectName);
+        GameObject areaObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform));
+        areaObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = areaObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = areaObject.AddComponent<RectTransform>();
+        }
+
+        rectTransform.anchorMin = anchorMin;
+        rectTransform.anchorMax = anchorMax;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+        rectTransform.localScale = Vector3.one;
+
+        return areaObject.transform;
+    }
+
+    private Image EnsureCombatSurfaceImage(Transform parent, string objectName, Color color)
+    {
+        Transform existing = parent.Find(objectName);
+        GameObject imageObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        imageObject.transform.SetParent(parent, false);
+        imageObject.transform.SetAsFirstSibling();
+
+        RectTransform rectTransform = imageObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = imageObject.AddComponent<RectTransform>();
+        }
+
+        StretchToParent(rectTransform);
+
+        Image image = imageObject.GetComponent<Image>();
+        if (image == null)
+        {
+            image = imageObject.AddComponent<Image>();
+        }
+
+        image.color = color;
+        image.raycastTarget = false;
+
+        return image;
+    }
+
+    private Text EnsureCombatSurfaceLabel(Transform parent, string objectName, string label, Vector2 anchorMin, Vector2 anchorMax, int fontSize)
+    {
+        Transform existing = parent.Find(objectName);
+        GameObject textObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+        textObject.transform.SetAsLastSibling();
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = textObject.AddComponent<RectTransform>();
+        }
+
+        rectTransform.anchorMin = anchorMin;
+        rectTransform.anchorMax = anchorMax;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Text text = textObject.GetComponent<Text>();
+        if (text == null)
+        {
+            text = textObject.AddComponent<Text>();
+        }
+
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = fontSize;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 10;
+        text.resizeTextMaxSize = fontSize;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = new Color(1f, 1f, 1f, 0.72f);
+        text.raycastTarget = false;
+        text.text = label;
+
+        return text;
+    }
+
+    private Transform EnsureSkillButtonRow(Transform parent)
+    {
+        Transform existing = parent.Find("SkillButtonRow");
+        GameObject rowObject = existing != null
+            ? existing.gameObject
+            : new GameObject("SkillButtonRow", typeof(RectTransform));
+        rowObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = rowObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = rowObject.AddComponent<RectTransform>();
+        }
+
+        rectTransform.anchorMin = new Vector2(0.06f, 0.08f);
+        rectTransform.anchorMax = new Vector2(0.94f, 0.72f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        HorizontalLayoutGroup layoutGroup = rowObject.GetComponent<HorizontalLayoutGroup>();
+        if (layoutGroup == null)
+        {
+            layoutGroup = rowObject.AddComponent<HorizontalLayoutGroup>();
+        }
+
+        layoutGroup.padding = new RectOffset(12, 12, 0, 0);
+        layoutGroup.spacing = 18f;
+        layoutGroup.childAlignment = TextAnchor.MiddleCenter;
+        layoutGroup.childControlWidth = false;
+        layoutGroup.childControlHeight = false;
+        layoutGroup.childForceExpandWidth = false;
+        layoutGroup.childForceExpandHeight = false;
+
+        return rowObject.transform;
+    }
+
+    private void EnsureSkillSlot(Transform parent, string objectName)
+    {
+        Transform existing = parent.Find(objectName);
+        GameObject slotObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(LayoutElement));
+        slotObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = slotObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = slotObject.AddComponent<RectTransform>();
+        }
+
+        rectTransform.sizeDelta = new Vector2(CombatSkillSlotSize, CombatSkillSlotSize);
+        rectTransform.localScale = Vector3.one;
+
+        Image slotImage = slotObject.GetComponent<Image>();
+        if (slotImage != null)
+        {
+            slotImage.raycastTarget = false;
+        }
+
+        LayoutElement layoutElement = slotObject.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+        {
+            layoutElement = slotObject.AddComponent<LayoutElement>();
+        }
+
+        layoutElement.minWidth = CombatSkillSlotSize;
+        layoutElement.preferredWidth = CombatSkillSlotSize;
+        layoutElement.minHeight = CombatSkillSlotSize;
+        layoutElement.preferredHeight = CombatSkillSlotSize;
+        layoutElement.flexibleWidth = 0f;
+        layoutElement.flexibleHeight = 0f;
+
+        EnsureSkillSlotImage(slotObject.transform, "FrameImage", new Color(0.7f, 0.76f, 0.84f, 0.34f), Vector2.zero, Vector2.one, true);
+        EnsureSkillSlotImage(slotObject.transform, "IconImage", new Color(0.2f, 0.25f, 0.31f, 0.42f), new Vector2(0.16f, 0.16f), new Vector2(0.84f, 0.84f), true);
+        EnsureSkillSlotImage(slotObject.transform, "CooldownDim", new Color(0f, 0f, 0f, 0.58f), Vector2.zero, Vector2.one, false);
+        EnsureSkillSlotText(slotObject.transform, "CooldownText", "0", false);
+        EnsureSkillSlotImage(slotObject.transform, "LockOverlay", new Color(0f, 0f, 0f, 0.68f), Vector2.zero, Vector2.one, false);
+        EnsureSkillSlotImage(slotObject.transform, "HighlightImage", new Color(1f, 0.92f, 0.45f, 0.34f), Vector2.zero, Vector2.one, false);
+    }
+
+    private Image EnsureSkillSlotImage(Transform parent, string objectName, Color color, Vector2 anchorMin, Vector2 anchorMax, bool isActive)
+    {
+        Transform existing = parent.Find(objectName);
+        GameObject imageObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        imageObject.transform.SetParent(parent, false);
+        imageObject.transform.SetAsLastSibling();
+
+        RectTransform rectTransform = imageObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = imageObject.AddComponent<RectTransform>();
+        }
+
+        rectTransform.anchorMin = anchorMin;
+        rectTransform.anchorMax = anchorMax;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image image = imageObject.GetComponent<Image>();
+        if (image == null)
+        {
+            image = imageObject.AddComponent<Image>();
+        }
+
+        image.color = color;
+        image.raycastTarget = false;
+
+        imageObject.SetActive(isActive);
+        return image;
+    }
+
+    private Text EnsureSkillSlotText(Transform parent, string objectName, string label, bool isActive)
+    {
+        Transform existing = parent.Find(objectName);
+        GameObject textObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+        textObject.transform.SetAsLastSibling();
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = textObject.AddComponent<RectTransform>();
+        }
+
+        StretchToParent(rectTransform);
+
+        Text text = textObject.GetComponent<Text>();
+        if (text == null)
+        {
+            text = textObject.AddComponent<Text>();
+        }
+
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 22;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 12;
+        text.resizeTextMaxSize = 22;
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        text.text = label;
+
+        textObject.SetActive(isActive);
+        return text;
     }
 
     private float GetSafeAreaTopInsetInCanvasUnits()
