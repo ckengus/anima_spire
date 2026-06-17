@@ -77,6 +77,7 @@ public class MainTabController : MonoBehaviour
     private Image nonCombatPageBackgroundImage;
     private AspectRatioFitter nonCombatPageBackgroundAspectFitter;
     private GameObject globalTabPlaceholderPanel;
+    private GameObject heroScrollView;
     private Text globalTabPlaceholderTitle;
     private Text globalTabPlaceholderMessage;
     private GameObject modalDim;
@@ -94,6 +95,7 @@ public class MainTabController : MonoBehaviour
         EnsureCombatHud();
         EnsureCombatSurfaceLayout();
         EnsureTabContentPanel();
+        EnsureHeroPlaceholderPanel();
         EnsureEquipmentPanel();
         EnsureBottomMenuButtons();
         EnsureLaboratoryPanel();
@@ -123,6 +125,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(combatPanel, true);
         SetActiveIfPresent(infoPanel, true);
         SetActiveIfPresent(tabContentPanel, false);
+        SetActiveIfPresent(heroScrollView, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
@@ -158,6 +161,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(combatPanel, false);
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, true);
+        SetActiveIfPresent(heroScrollView, false);
         SetActiveIfPresent(equipmentPanel, true);
         laboratoryPanelController?.HidePanel();
         equipmentSynthesisPanelController?.HidePanel();
@@ -174,6 +178,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(combatPanel, false);
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
+        SetActiveIfPresent(heroScrollView, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         equipmentSynthesisPanelController?.HidePanel();
@@ -191,6 +196,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(combatPanel, false);
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
+        SetActiveIfPresent(heroScrollView, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
@@ -1585,7 +1591,21 @@ public class MainTabController : MonoBehaviour
 
     private void ShowHeroTabPlaceholder()
     {
-        ShowGlobalTabPlaceholder(GlobalTabState.Hero, "\uC601\uC6C5", "\uC601\uC6C5 \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
+        currentEquipmentEntryContext = EquipmentEntryContext.None;
+        currentGlobalTabState = GlobalTabState.Hero;
+        ApplyGlobalTabSurfaceState();
+        HideGlobalTabPlaceholder();
+        EnsureHeroPlaceholderPanel();
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
+        SetActiveIfPresent(tabContentPanel, true);
+        SetActiveIfPresent(heroScrollView, true);
+        SetActiveIfPresent(equipmentPanel, false);
+        equipmentPanelController?.HidePanel();
+        laboratoryPanelController?.HidePanel();
+        equipmentSynthesisPanelController?.HidePanel();
+        heroScrollView.transform.SetAsLastSibling();
+        SetBottomMenuAsLastSibling();
     }
 
     private void ShowLaboratoryTabPlaceholder()
@@ -1647,6 +1667,7 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(combatPanel, false);
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
+        SetActiveIfPresent(heroScrollView, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
@@ -2100,6 +2121,302 @@ public class MainTabController : MonoBehaviour
         Image image = dimObject.GetComponent<Image>();
         image.color = new Color(0f, 0f, 0f, 0.58f);
         image.raycastTarget = true;
+    }
+
+    private void EnsureHeroPlaceholderPanel()
+    {
+        EnsureTabContentPanel();
+
+        Transform existing = tabContentPanel.transform.Find("GO_HeroScrollView");
+        heroScrollView = existing != null
+            ? existing.gameObject
+            : new GameObject("GO_HeroScrollView", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(ScrollRect));
+        heroScrollView.transform.SetParent(tabContentPanel.transform, false);
+        heroScrollView.transform.SetAsLastSibling();
+        StretchToParent(heroScrollView.GetComponent<RectTransform>());
+
+        Image scrollImage = heroScrollView.GetComponent<Image>();
+        scrollImage.color = new Color(1f, 1f, 1f, 0f);
+        scrollImage.raycastTarget = true;
+
+        RectTransform viewport = EnsureHeroViewport(heroScrollView.transform);
+        RectTransform content = EnsureHeroScrollContent(viewport);
+
+        ScrollRect scrollRect = heroScrollView.GetComponent<ScrollRect>();
+        scrollRect.content = content;
+        scrollRect.viewport = viewport;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Elastic;
+        scrollRect.inertia = true;
+        scrollRect.scrollSensitivity = 28f;
+        scrollRect.horizontalScrollbar = null;
+        scrollRect.verticalScrollbar = null;
+
+        EnsureHeroProfileArea(content);
+        EnsureHeroStatsArea(content);
+        EnsureHeroEquipmentArea(content);
+        EnsureHeroActionArea(content);
+
+        heroScrollView.SetActive(false);
+    }
+
+    private RectTransform EnsureHeroViewport(Transform parent)
+    {
+        Transform existing = parent.Find("GO_HeroViewport");
+        GameObject viewportObject = existing != null
+            ? existing.gameObject
+            : new GameObject("GO_HeroViewport", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(RectMask2D));
+        viewportObject.transform.SetParent(parent, false);
+        StretchToParent(viewportObject.GetComponent<RectTransform>());
+
+        if (viewportObject.TryGetComponent(out Mask mask))
+        {
+            DestroyComponent(mask);
+        }
+
+        if (!viewportObject.TryGetComponent(out RectMask2D _))
+        {
+            viewportObject.AddComponent<RectMask2D>();
+        }
+
+        Image image = viewportObject.GetComponent<Image>();
+        image.color = new Color(1f, 1f, 1f, 0f);
+        image.raycastTarget = true;
+
+        return viewportObject.GetComponent<RectTransform>();
+    }
+
+    private RectTransform EnsureHeroScrollContent(RectTransform viewport)
+    {
+        Transform existing = viewport.transform.Find("GO_HeroScrollContent");
+        GameObject contentObject = existing != null
+            ? existing.gameObject
+            : new GameObject("GO_HeroScrollContent", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        contentObject.transform.SetParent(viewport, false);
+
+        RectTransform rectTransform = contentObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0.5f, 1f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = new Vector2(0f, 0f);
+
+        VerticalLayoutGroup layoutGroup = contentObject.GetComponent<VerticalLayoutGroup>();
+        layoutGroup.padding = new RectOffset(24, 24, 24, 28);
+        layoutGroup.spacing = 18f;
+        layoutGroup.childAlignment = TextAnchor.UpperCenter;
+        layoutGroup.childControlWidth = true;
+        layoutGroup.childControlHeight = true;
+        layoutGroup.childForceExpandWidth = true;
+        layoutGroup.childForceExpandHeight = false;
+
+        ContentSizeFitter fitter = contentObject.GetComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        return rectTransform;
+    }
+
+    private void EnsureHeroProfileArea(Transform content)
+    {
+        Transform section = EnsureHeroSection(content, "UI_HeroProfileArea", 260f);
+        ClearChildren(section);
+
+        GameObject portrait = CreateHeroImage(section, "ProfileImagePlaceholder", new Vector2(0.05f, 0.18f), new Vector2(0.34f, 0.86f), new Color(0.2f, 0.24f, 0.3f, 0.72f));
+        CreateHeroText(portrait.transform, "PortraitLabel", "\uC601\uC6C5", Vector2.zero, Vector2.one, 30, TextAnchor.MiddleCenter);
+        CreateHeroText(section, "ProfileTitle", "\uB300\uD45C \uC601\uC6C5", new Vector2(0.39f, 0.68f), new Vector2(0.95f, 0.88f), 28, TextAnchor.MiddleLeft);
+        CreateHeroText(section, "ProfileName", "\uC774\uB984: Placeholder", new Vector2(0.39f, 0.5f), new Vector2(0.95f, 0.66f), 22, TextAnchor.MiddleLeft);
+        CreateHeroText(section, "ProfileLevel", "Lv. 000", new Vector2(0.39f, 0.34f), new Vector2(0.64f, 0.48f), 20, TextAnchor.MiddleLeft);
+        CreateHeroText(section, "ProfileGrade", "\uB4F1\uAE09: -", new Vector2(0.66f, 0.34f), new Vector2(0.95f, 0.48f), 20, TextAnchor.MiddleLeft);
+        CreateHeroText(section, "ProfileElement", "\uC18D\uC131: -", new Vector2(0.39f, 0.18f), new Vector2(0.95f, 0.32f), 20, TextAnchor.MiddleLeft);
+    }
+
+    private void EnsureHeroStatsArea(Transform content)
+    {
+        Transform section = EnsureHeroSection(content, "UI_HeroStatsArea", 300f);
+        ClearChildren(section);
+
+        CreateHeroText(section, "StatsTitle", "\uC2A4\uD0EF", new Vector2(0.05f, 0.78f), new Vector2(0.95f, 0.94f), 26, TextAnchor.MiddleLeft);
+        string[] statLabels =
+        {
+            "\uACF5\uACA9\uB825 000",
+            "\uCCB4\uB825 000",
+            "\uBC29\uC5B4\uB825 000",
+            "\uACF5\uACA9\uC18D\uB3C4 000",
+            "\uCE58\uBA85\uD0C0 000"
+        };
+
+        for (int i = 0; i < statLabels.Length; i++)
+        {
+            float top = 0.72f - (i * 0.13f);
+            CreateHeroText(section, $"StatLabel_{i:00}", statLabels[i], new Vector2(0.08f, top - 0.1f), new Vector2(0.92f, top), 20, TextAnchor.MiddleLeft);
+        }
+    }
+
+    private void EnsureHeroEquipmentArea(Transform content)
+    {
+        Transform section = EnsureHeroSection(content, "UI_HeroEquipmentArea", 380f);
+        ClearChildren(section);
+
+        CreateHeroText(section, "EquipmentTitle", "\uC7A5\uBE44", new Vector2(0.05f, 0.84f), new Vector2(0.95f, 0.96f), 26, TextAnchor.MiddleLeft);
+        string[] equipmentLabels =
+        {
+            "\uBB34\uAE30",
+            "\uBC29\uC5B4\uAD6C",
+            "\uC7A5\uAC11",
+            "\uC2E0\uBC1C",
+            "\uBAA9\uAC78\uC774",
+            "\uBC18\uC9C0"
+        };
+
+        for (int i = 0; i < equipmentLabels.Length; i++)
+        {
+            int column = i % 3;
+            int row = i / 3;
+            float xMin = 0.06f + (column * 0.31f);
+            float yMax = row == 0 ? 0.76f : 0.42f;
+            GameObject slot = CreateHeroImage(section, $"EquipmentSlot_{i:00}", new Vector2(xMin, yMax - 0.24f), new Vector2(xMin + 0.26f, yMax), new Color(0.18f, 0.21f, 0.27f, 0.72f));
+            CreateHeroText(slot.transform, "SlotLabel", equipmentLabels[i], Vector2.zero, Vector2.one, 18, TextAnchor.MiddleCenter);
+        }
+    }
+
+    private void EnsureHeroActionArea(Transform content)
+    {
+        Transform section = EnsureHeroSection(content, "UI_HeroActionArea", 220f);
+        ClearChildren(section);
+
+        CreateHeroText(section, "ActionTitle", "\uC561\uC158", new Vector2(0.05f, 0.72f), new Vector2(0.95f, 0.9f), 26, TextAnchor.MiddleLeft);
+        string[] actionLabels =
+        {
+            "\uAC15\uD654",
+            "\uC7A5\uBE44",
+            "\uD3B8\uC131",
+            "\uC0C1\uC138"
+        };
+
+        for (int i = 0; i < actionLabels.Length; i++)
+        {
+            float xMin = 0.06f + (i * 0.235f);
+            CreateHeroDisabledButton(section, $"ActionButton_{i:00}", actionLabels[i], new Vector2(xMin, 0.22f), new Vector2(xMin + 0.19f, 0.58f));
+        }
+    }
+
+    private Transform EnsureHeroSection(Transform content, string objectName, float preferredHeight)
+    {
+        Transform existing = content.Find(objectName);
+        GameObject sectionObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(LayoutElement));
+        sectionObject.transform.SetParent(content, false);
+
+        RectTransform rectTransform = sectionObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0.5f, 1f);
+        rectTransform.sizeDelta = new Vector2(0f, preferredHeight);
+
+        LayoutElement layoutElement = sectionObject.GetComponent<LayoutElement>();
+        layoutElement.minHeight = preferredHeight;
+        layoutElement.preferredHeight = preferredHeight;
+        layoutElement.flexibleHeight = 0f;
+
+        Image image = sectionObject.GetComponent<Image>();
+        image.color = new Color(0.06f, 0.075f, 0.1f, 0.68f);
+        image.raycastTarget = false;
+
+        return sectionObject.transform;
+    }
+
+    private GameObject CreateHeroImage(Transform parent, string objectName, Vector2 anchorMin, Vector2 anchorMax, Color color)
+    {
+        GameObject imageObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        imageObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = imageObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = anchorMin;
+        rectTransform.anchorMax = anchorMax;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image image = imageObject.GetComponent<Image>();
+        image.color = color;
+        image.raycastTarget = false;
+
+        return imageObject;
+    }
+
+    private Text CreateHeroText(Transform parent, string objectName, string label, Vector2 anchorMin, Vector2 anchorMax, int fontSize, TextAnchor alignment)
+    {
+        GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = textObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = anchorMin;
+        rectTransform.anchorMax = anchorMax;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = fontSize;
+        text.resizeTextForBestFit = true;
+        text.resizeTextMinSize = 12;
+        text.resizeTextMaxSize = fontSize;
+        text.alignment = alignment;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        text.text = label;
+
+        return text;
+    }
+
+    private void CreateHeroDisabledButton(Transform parent, string objectName, string label, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        buttonObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = buttonObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = anchorMin;
+        rectTransform.anchorMax = anchorMax;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = new Color(0.22f, 0.25f, 0.31f, 0.42f);
+        image.raycastTarget = false;
+
+        Button button = buttonObject.GetComponent<Button>();
+        button.targetGraphic = image;
+        button.interactable = false;
+        button.onClick.RemoveAllListeners();
+
+        CreateHeroText(buttonObject.transform, "Label", label, Vector2.zero, Vector2.one, 18, TextAnchor.MiddleCenter);
+    }
+
+    private void ClearChildren(Transform parent)
+    {
+        for (int i = parent.childCount - 1; i >= 0; i--)
+        {
+            DestroyCombatSurfaceObject(parent.GetChild(i).gameObject);
+        }
+    }
+
+    private void DestroyComponent(Component component)
+    {
+        if (component == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            Destroy(component);
+        }
+        else
+        {
+            DestroyImmediate(component);
+        }
     }
 
     private void EnsureEquipmentPanel()
