@@ -3,14 +3,9 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 public class MainTabController : MonoBehaviour
 {
-    private const string CombatInfoPanelBackgroundPath = "Assets/AnimaSpire/Art/UI/Backgrounds/Prototype/temp_combat_info_panel_bg.png";
-    private const string CombatSkillPanelBackgroundPath = "Assets/AnimaSpire/Art/UI/Backgrounds/Prototype/temp_skill_button_panel_bg.png";
     private const float CombatAreaRatio = 0.5f;
     private const float CombatSceneContentRatio = 0.6f;
     private const float CombatFocusViewportY = 0.65f;
@@ -53,6 +48,8 @@ public class MainTabController : MonoBehaviour
     [SerializeField] private Transform equipmentRootTarget;
     [SerializeField] private EquipmentManager equipmentManager;
     [SerializeField] private ProgressSaveManager progressSaveManager;
+    [SerializeField] private Sprite combatInfoPanelBackgroundSprite;
+    [SerializeField] private Sprite combatSkillPanelBackgroundSprite;
     [SerializeField] private Sprite heroTabBackgroundSprite;
     [SerializeField] private Sprite laboratoryTabBackgroundSprite;
     [SerializeField] private Sprite guildTabBackgroundSprite;
@@ -82,6 +79,8 @@ public class MainTabController : MonoBehaviour
     private GameObject shopHubPlaceholderRoot;
     private Text globalTabPlaceholderTitle;
     private Text globalTabPlaceholderMessage;
+    private GameObject fullscreenModalOverlay;
+    private RectTransform fullscreenModalSafeAreaRoot;
     private GameObject modalDim;
     private GameObject preparingModal;
 
@@ -118,6 +117,7 @@ public class MainTabController : MonoBehaviour
     {
         ApplyHudAnchorLayout();
         ApplyTabContentSafeAreaOffset();
+        ApplyFullscreenModalSafeAreaOffset();
     }
 
     public void ShowBattle()
@@ -962,7 +962,7 @@ public class MainTabController : MonoBehaviour
             infoArea,
             "CombatInfoSurface",
             new Color(0.08f, 0.12f, 0.16f, 0.34f),
-            LoadPrototypeCombatSurfaceSprite(CombatInfoPanelBackgroundPath));
+            combatInfoPanelBackgroundSprite);
         EnsureCombatSurfaceLabel(infoArea, "CombatInfoLabel", "Combat Info", new Vector2(0.04f, 0.18f), new Vector2(0.96f, 0.82f), 18);
 
         Transform skillArea = EnsureCombatSurfaceArea(
@@ -974,7 +974,7 @@ public class MainTabController : MonoBehaviour
             skillArea,
             "CombatSkillSurface",
             new Color(0.08f, 0.1f, 0.13f, 0.42f),
-            LoadPrototypeCombatSurfaceSprite(CombatSkillPanelBackgroundPath));
+            combatSkillPanelBackgroundSprite);
         EnsureCombatSurfaceLabel(skillArea, "CombatSkillLabel", "Skills", new Vector2(0.04f, 0.78f), new Vector2(0.96f, 0.96f), 16);
 
         Transform skillButtonRow = EnsureSkillButtonRow(skillArea);
@@ -1130,15 +1130,6 @@ public class MainTabController : MonoBehaviour
         image.raycastTarget = false;
 
         return image;
-    }
-
-    private Sprite LoadPrototypeCombatSurfaceSprite(string assetPath)
-    {
-#if UNITY_EDITOR
-        return AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
-#else
-        return null;
-#endif
     }
 
     private Text EnsureCombatSurfaceLabel(Transform parent, string objectName, string label, Vector2 anchorMin, Vector2 anchorMax, int fontSize)
@@ -1671,9 +1662,16 @@ public class MainTabController : MonoBehaviour
             return;
         }
 
+        if (fullscreenModalOverlay != null)
+        {
+            fullscreenModalOverlay.SetActive(true);
+            fullscreenModalOverlay.transform.SetAsLastSibling();
+        }
+
+        ApplyFullscreenModalSafeAreaOffset();
         modalDim.SetActive(true);
         preparingModal.SetActive(true);
-        modalDim.transform.SetAsLastSibling();
+        modalDim.transform.SetAsFirstSibling();
         preparingModal.transform.SetAsLastSibling();
     }
 
@@ -1687,6 +1685,11 @@ public class MainTabController : MonoBehaviour
         if (modalDim != null)
         {
             modalDim.SetActive(false);
+        }
+
+        if (fullscreenModalOverlay != null)
+        {
+            fullscreenModalOverlay.SetActive(false);
         }
     }
 
@@ -1788,28 +1791,66 @@ public class MainTabController : MonoBehaviour
 
     private void EnsurePreparingModal()
     {
-        Transform popupOverlay = FindPopupOverlay();
-        if (popupOverlay == null)
+        Transform modalOverlay = EnsureFullscreenModalOverlay();
+        if (modalOverlay == null)
         {
             return;
         }
 
-        modalDim = EnsureModalDim(popupOverlay);
-        preparingModal = EnsurePreparingModalCard(popupOverlay);
+        DisableLegacyPopupModalObjects();
+
+        modalDim = EnsureFullscreenModalDim(modalOverlay);
+        fullscreenModalSafeAreaRoot = EnsureFullscreenModalSafeAreaRoot(modalOverlay);
+        preparingModal = EnsurePreparingModalCard(fullscreenModalSafeAreaRoot);
+        ApplyFullscreenModalSafeAreaOffset();
 
         modalDim.SetActive(false);
         preparingModal.SetActive(false);
-        modalDim.transform.SetAsLastSibling();
+        modalDim.transform.SetAsFirstSibling();
         preparingModal.transform.SetAsLastSibling();
+        fullscreenModalOverlay.SetActive(false);
     }
 
-    private GameObject EnsureModalDim(Transform popupOverlay)
+    private Transform EnsureFullscreenModalOverlay()
     {
-        Transform existing = popupOverlay.Find("ModalDim");
+        Transform parent = FindSceneDescendantByName("FullscreenPresentationLayer");
+        if (parent == null)
+        {
+            parent = FindOverlayCanvas();
+        }
+
+        if (parent == null)
+        {
+            return null;
+        }
+
+        Transform existing = parent.Find("FullscreenModalOverlay");
+        fullscreenModalOverlay = existing != null
+            ? existing.gameObject
+            : new GameObject("FullscreenModalOverlay", typeof(RectTransform));
+        fullscreenModalOverlay.transform.SetParent(parent, false);
+        fullscreenModalOverlay.layer = parent.gameObject.layer;
+
+        RectTransform rectTransform = fullscreenModalOverlay.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = fullscreenModalOverlay.AddComponent<RectTransform>();
+        }
+
+        StretchToParent(rectTransform);
+        fullscreenModalOverlay.transform.SetAsLastSibling();
+
+        return fullscreenModalOverlay.transform;
+    }
+
+    private GameObject EnsureFullscreenModalDim(Transform modalOverlay)
+    {
+        Transform existing = modalOverlay.Find("FullscreenModalDim");
         GameObject dimObject = existing != null
             ? existing.gameObject
-            : new GameObject("ModalDim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        dimObject.transform.SetParent(popupOverlay, false);
+            : new GameObject("FullscreenModalDim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        dimObject.transform.SetParent(modalOverlay, false);
+        dimObject.layer = modalOverlay.gameObject.layer;
 
         RectTransform rectTransform = dimObject.GetComponent<RectTransform>();
         StretchToParent(rectTransform);
@@ -1821,13 +1862,84 @@ public class MainTabController : MonoBehaviour
         return dimObject;
     }
 
-    private GameObject EnsurePreparingModalCard(Transform popupOverlay)
+    private RectTransform EnsureFullscreenModalSafeAreaRoot(Transform modalOverlay)
     {
-        Transform existing = popupOverlay.Find("PreparingModal");
+        Transform existing = modalOverlay.Find("FullscreenModalSafeAreaRoot");
+        GameObject safeAreaObject = existing != null
+            ? existing.gameObject
+            : new GameObject("FullscreenModalSafeAreaRoot", typeof(RectTransform));
+        safeAreaObject.transform.SetParent(modalOverlay, false);
+        safeAreaObject.layer = modalOverlay.gameObject.layer;
+
+        RectTransform rectTransform = safeAreaObject.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            rectTransform = safeAreaObject.AddComponent<RectTransform>();
+        }
+
+        safeAreaObject.transform.SetAsLastSibling();
+        return rectTransform;
+    }
+
+    private void ApplyFullscreenModalSafeAreaOffset()
+    {
+        if (fullscreenModalSafeAreaRoot == null)
+        {
+            return;
+        }
+
+        fullscreenModalSafeAreaRoot.anchorMin = Vector2.zero;
+        fullscreenModalSafeAreaRoot.anchorMax = Vector2.one;
+        fullscreenModalSafeAreaRoot.anchoredPosition = Vector2.zero;
+        fullscreenModalSafeAreaRoot.sizeDelta = Vector2.zero;
+
+        RectTransform parentRect = fullscreenModalSafeAreaRoot.parent as RectTransform;
+        if (parentRect == null || Screen.width <= 0 || Screen.height <= 0)
+        {
+            fullscreenModalSafeAreaRoot.offsetMin = Vector2.zero;
+            fullscreenModalSafeAreaRoot.offsetMax = Vector2.zero;
+            return;
+        }
+
+        Rect safeArea = Screen.safeArea;
+        Vector2 parentSize = parentRect.rect.size;
+        fullscreenModalSafeAreaRoot.offsetMin = new Vector2(
+            safeArea.xMin / Screen.width * parentSize.x,
+            safeArea.yMin / Screen.height * parentSize.y);
+        fullscreenModalSafeAreaRoot.offsetMax = new Vector2(
+            -(Screen.width - safeArea.xMax) / Screen.width * parentSize.x,
+            -(Screen.height - safeArea.yMax) / Screen.height * parentSize.y);
+    }
+
+    private void DisableLegacyPopupModalObjects()
+    {
+        Transform popupOverlay = FindPopupOverlay();
+        if (popupOverlay == null)
+        {
+            return;
+        }
+
+        Transform legacyDim = popupOverlay.Find("ModalDim");
+        if (legacyDim != null)
+        {
+            legacyDim.gameObject.SetActive(false);
+        }
+
+        Transform legacyModal = popupOverlay.Find("PreparingModal");
+        if (legacyModal != null)
+        {
+            legacyModal.gameObject.SetActive(false);
+        }
+    }
+
+    private GameObject EnsurePreparingModalCard(Transform modalSafeAreaRoot)
+    {
+        Transform existing = modalSafeAreaRoot.Find("PreparingModal");
         GameObject modalObject = existing != null
             ? existing.gameObject
             : new GameObject("PreparingModal", typeof(RectTransform));
-        modalObject.transform.SetParent(popupOverlay, false);
+        modalObject.transform.SetParent(modalSafeAreaRoot, false);
+        modalObject.layer = modalSafeAreaRoot.gameObject.layer;
 
         RectTransform rectTransform = modalObject.GetComponent<RectTransform>();
         rectTransform.anchorMin = new Vector2(0.5f, 0.5f);

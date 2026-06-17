@@ -688,6 +688,8 @@ MonoBehaviour:
   equipmentRootTarget: {fileID: 100031021}
   equipmentManager: {fileID: 0}
   progressSaveManager: {fileID: 0}
+  combatInfoPanelBackgroundSprite: {fileID: 21300000, guid: b98bd05f6d9e5634bb6d63696a3e397c, type: 3}
+  combatSkillPanelBackgroundSprite: {fileID: 21300000, guid: f77fdaa96412dfa4aa29fa511cc3add1, type: 3}
   heroTabBackgroundSprite: {fileID: 21300000, guid: e7ba8baeb2223334eb3c94342ea8aef9, type: 3}
   laboratoryTabBackgroundSprite: {fileID: 21300000, guid: 74e2d5b12af728f4ebdf84950db9efcd, type: 3}
   guildTabBackgroundSprite: {fileID: 21300000, guid: 25bf111d08e79cf4890712471f1fb4f1, type: 3}
