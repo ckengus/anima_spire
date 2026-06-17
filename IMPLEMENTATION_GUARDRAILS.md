@@ -1,17 +1,18 @@
-# PROJECT_RULES.md_v09
+# Implementation Guardrails - Anima Spire_v02
 
 ## Authoring Notes
 
-- This document must be written in English.
-- This document is the minimal implementation guardrail file for Codex and ClaudeCode.
-- This document is not a game design document.
-- This document is not an MVP roadmap.
-- This document is not a replacement for the current work instruction.
-- Codex and ClaudeCode must use this file as a stable guardrail before implementation or code review.
-- Detailed project background, current MVP details, implementation scope, allowed files, forbidden files, and step-specific requirements must be provided in each work instruction by GPT.
-- This file should not be revised every time the design plan or MVP roadmap changes.
-- Revise this file only when a core implementation guardrail changes, a repeated critical mistake must be prevented, or the user explicitly requests revision.
-- Keep this file concise and operational.
+* This document must be written in English.
+* This document is the minimum implementation guardrail file for Codex and ClaudeCode.
+* This document is not a game design document.
+* This document is not an MVP roadmap.
+* This document is not a replacement for the current work instruction.
+* Codex and ClaudeCode must use this file as a stable guardrail before implementation or code review.
+* GPT and Claude must reflect this file when writing implementation instructions or code review instructions.
+* Detailed project background, current MVP details, implementation scope, allowed files, forbidden files, and step-specific requirements must be provided in each work instruction by GPT.
+* This file should not be revised every time the design plan or MVP roadmap changes.
+* Revise this file only when a core implementation guardrail changes, a repeated critical mistake must be prevented, or the user explicitly requests revision.
+* Keep this file concise and operational.
 
 ---
 
@@ -33,7 +34,37 @@ If this file and the current work instruction appear to conflict, stop and repor
 
 ---
 
-## 2. How to Use This File
+## 2. Related AI Rule Documents
+
+The Anima Spire source rule documents are organized as follows.
+
+1. `01_AI_ROUTER.md`
+
+   * Entry-point guide for AI rule documents.
+   * It tells each AI which rule document and section to check first.
+
+2. `02_AI_WORKFLOW_RULES.md`
+
+   * Workflow judgment rules.
+   * It defines task flow, AI roles, decision points, review triggers, and user decision requirements.
+
+3. `03_AI_OUTPUT_RULES.md`
+
+   * Output formatting rules.
+   * It defines file names, document blocks, templates, Drive document rules, and response formats.
+
+4. `IMPLEMENTATION_GUARDRAILS.md`
+
+   * Implementation and code review guardrails.
+   * Codex and ClaudeCode must follow this document before implementation or code review.
+
+This document does not replace `02_AI_WORKFLOW_RULES.md` or `03_AI_OUTPUT_RULES.md`.
+
+This document only defines implementation and code review guardrails.
+
+---
+
+## 3. How to Use This File
 
 Before implementation or review, Codex and ClaudeCode must check:
 
@@ -62,7 +93,7 @@ If judgment is required beyond the instruction, stop and report.
 
 ---
 
-## 3. Project Identity Guardrails
+## 4. Project Identity Guardrails
 
 Anima Spire is a Unity-based mobile portrait 2D automatic combat RPG.
 
@@ -84,7 +115,7 @@ Do not implement project direction changes unless the current work instruction e
 
 ---
 
-## 4. Legacy Remnants Guardrails
+## 5. Legacy Remnants Guardrails
 
 Legacy names and code remnants may still exist in the project.
 
@@ -113,7 +144,7 @@ If a legacy name is connected to SaveData or existing runtime behavior, do not r
 
 ---
 
-## 5. Scene and Unity Guardrails
+## 6. Scene and Unity Guardrails
 
 The development scene standard is MainPrototype.
 
@@ -142,7 +173,7 @@ If these files or folders changed unintentionally, report them and do not includ
 
 ---
 
-## 6. UI Guardrails
+## 7. UI Guardrails
 
 The current UI Canvas standard is UI_OverlayCanvas.
 
@@ -170,7 +201,7 @@ Do not treat Android A-Area behavior as complete unless the user reports real-de
 
 ---
 
-## 7. UI Surface and Placeholder Guardrails
+## 8. UI Surface and Placeholder Guardrails
 
 Temporary MVP UI Surface is not final visual design.
 
@@ -192,7 +223,7 @@ Device adaptation should use spacing, margins, alignment, row or column layout, 
 
 ---
 
-## 8. SaveData Guardrails
+## 9. SaveData Guardrails
 
 Do not change SaveData unless the current work instruction explicitly allows it.
 
@@ -224,7 +255,7 @@ If SaveData changes seem necessary, stop and report before implementing.
 
 ---
 
-## 9. Equipment and Magic Guardrails
+## 10. Equipment and Magic Guardrails
 
 The current user-facing equipment slot term is Weapon Slot.
 
@@ -258,7 +289,7 @@ Do not expand Belt into a new active equipment slot unless explicitly assigned.
 
 ---
 
-## 10. Combat Guardrails
+## 11. Combat Guardrails
 
 Do not modify combat logic unless the current work instruction explicitly allows it.
 
@@ -295,7 +326,7 @@ Use the existing lightweight combat structure unless the work instruction says o
 
 ---
 
-## 11. Android Guardrails
+## 12. Android Guardrails
 
 Codex and ClaudeCode must not build Android APK or AAB.
 
@@ -328,7 +359,7 @@ If Android Theme, Manifest, styles.xml, Gradle, or ProjectSettings changes seem 
 
 ---
 
-## 12. Git Guardrails
+## 13. Git Guardrails
 
 Codex and ClaudeCode must not perform Git write operations.
 
@@ -352,7 +383,7 @@ Completion reports must state that no Git write operation was performed.
 
 ---
 
-## 13. Implementation Behavior Rules
+## 14. Implementation Behavior Rules
 
 Implement only the assigned scope.
 
@@ -386,7 +417,7 @@ If there is a conflict between files, scene hierarchy, SaveData, Android behavio
 
 ---
 
-## 14. Required Completion Report
+## 15. Required Completion Report
 
 After work, Codex or ClaudeCode must provide a completion report.
 
@@ -415,7 +446,7 @@ If testing was not possible, state what was not tested and why.
 
 ---
 
-## 15. Final Forbidden List
+## 16. Final Forbidden List
 
 The following are forbidden unless the current work instruction explicitly allows them.
 
@@ -454,9 +485,9 @@ The following are forbidden unless the current work instruction explicitly allow
 
 ---
 
-## 16. Final Summary
+## 17. Final Summary
 
-PROJECT_RULES.md_v09 is a stable implementation guardrail file.
+`IMPLEMENTATION_GUARDRAILS.md` is a stable implementation guardrail file.
 
 It is intentionally not a full project design document.
 
@@ -471,3 +502,20 @@ Legacy code and names may still exist in the project.
 Legacy remnants must not be expanded, renamed, deleted, or migrated unless the current work instruction explicitly says so.
 
 When in doubt, stop and report instead of guessing.
+
+---
+
+## 18. Change History
+
+v01
+
+* Migrated the stable implementation guardrails from `PROJECT_RULES.md_v09` to `IMPLEMENTATION_GUARDRAILS.md`.
+* Preserved the existing implementation guardrails without broad content changes.
+* Updated the document name and removed the old `PROJECT_RULES.md` self-reference from the final summary.
+
+v02
+
+* Added the `Related AI Rule Documents` section to align this file with the four-source-rule-document system.
+* Clarified that this document only defines implementation and code review guardrails.
+* Confirmed that `01_AI_ROUTER.md`, `02_AI_WORKFLOW_RULES.md`, and `03_AI_OUTPUT_RULES.md` do not replace this file.
+* Preserved the existing Scene, UI, SaveData, Equipment, Combat, Android, Git, completion report, and forbidden-list guardrails without weakening them.
