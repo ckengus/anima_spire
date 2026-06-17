@@ -3,10 +3,16 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class MainTabController : MonoBehaviour
 {
+    private const string CombatInfoPanelBackgroundPath = "Assets/AnimaSpire/Art/UI/Backgrounds/Prototype/temp_combat_info_panel_bg.png";
+    private const string CombatSkillPanelBackgroundPath = "Assets/AnimaSpire/Art/UI/Backgrounds/Prototype/temp_skill_button_panel_bg.png";
     private const float CombatAreaRatio = 0.5f;
+    private const float CombatSceneContentRatio = 0.6f;
     private const float CombatFocusViewportY = 0.65f;
     private const float BottomMenuRatio = 0.1f;
     private const float HudHeight = 88f;
@@ -716,7 +722,8 @@ public class MainTabController : MonoBehaviour
     private void EnsureThreeAreaLayout()
     {
         float middleMin = BottomMenuRatio;
-        float middleMax = 1f - CombatAreaRatio;
+        float combatSceneHeight = (1f - BottomMenuRatio) * CombatSceneContentRatio;
+        float middleMax = 1f - combatSceneHeight;
 
         ApplyAnchors(combatPanel, new Vector2(0f, middleMax), Vector2.one);
         ApplyAnchors(infoPanel, new Vector2(0f, middleMin), new Vector2(1f, middleMax));
@@ -908,8 +915,8 @@ public class MainTabController : MonoBehaviour
         Transform sceneViewArea = EnsureCombatSurfaceArea(
             surfaceRoot,
             "CombatSceneViewArea",
-            new Vector2(0.02f, 0.02f),
-            new Vector2(0.98f, 0.9f));
+            Vector2.zero,
+            Vector2.one);
         EnsureCombatSurfaceImage(sceneViewArea, "CombatSceneViewSurface", new Color(0.14f, 0.18f, 0.22f, 0.16f));
         EnsureCombatSurfaceLabel(sceneViewArea, "CombatSceneViewLabel", "Combat Scene View", new Vector2(0.04f, 0.72f), new Vector2(0.96f, 0.94f), 18);
 
@@ -925,21 +932,32 @@ public class MainTabController : MonoBehaviour
         CleanupMisplacedCombatSurfaceArea("CombatSkillArea", infoPanel.transform, surfaceRoot, combatPanel.transform);
         DisableLegacyInfoPanelHeroHpText();
 
+        float infoPanelHeight = Mathf.Max(0.01f, 1f - BottomMenuRatio - ((1f - BottomMenuRatio) * CombatSceneContentRatio));
+        float skillAreaHeightRatio = Mathf.Clamp01(BottomMenuRatio / infoPanelHeight);
+
         Transform infoArea = EnsureCombatSurfaceArea(
             infoPanel.transform,
             "CombatInfoArea",
-            new Vector2(0.04f, 0.28f),
-            new Vector2(0.96f, 0.96f));
-        EnsureCombatSurfaceImage(infoArea, "CombatInfoSurface", new Color(0.08f, 0.12f, 0.16f, 0.34f));
+            new Vector2(0f, skillAreaHeightRatio),
+            Vector2.one);
+        EnsureCombatSurfaceImage(
+            infoArea,
+            "CombatInfoSurface",
+            new Color(0.08f, 0.12f, 0.16f, 0.34f),
+            LoadPrototypeCombatSurfaceSprite(CombatInfoPanelBackgroundPath));
         EnsureCombatSurfaceLabel(infoArea, "CombatInfoLabel", "Combat Info", new Vector2(0.04f, 0.18f), new Vector2(0.96f, 0.82f), 18);
 
         Transform skillArea = EnsureCombatSurfaceArea(
             infoPanel.transform,
             "CombatSkillArea",
-            new Vector2(0.04f, 0.04f),
-            new Vector2(0.96f, 0.24f));
-        EnsureCombatSurfaceImage(skillArea, "CombatSkillSurface", new Color(0.08f, 0.1f, 0.13f, 0.42f));
-        EnsureCombatSurfaceLabel(skillArea, "CombatSkillLabel", "Skills", new Vector2(0.04f, 0.72f), new Vector2(0.96f, 0.96f), 16);
+            Vector2.zero,
+            new Vector2(1f, skillAreaHeightRatio));
+        EnsureCombatSurfaceImage(
+            skillArea,
+            "CombatSkillSurface",
+            new Color(0.08f, 0.1f, 0.13f, 0.42f),
+            LoadPrototypeCombatSurfaceSprite(CombatSkillPanelBackgroundPath));
+        EnsureCombatSurfaceLabel(skillArea, "CombatSkillLabel", "Skills", new Vector2(0.04f, 0.78f), new Vector2(0.96f, 0.96f), 16);
 
         Transform skillButtonRow = EnsureSkillButtonRow(skillArea);
         for (int i = 1; i <= 4; i++)
@@ -1051,7 +1069,7 @@ public class MainTabController : MonoBehaviour
         return areaObject.transform;
     }
 
-    private Image EnsureCombatSurfaceImage(Transform parent, string objectName, Color color)
+    private Image EnsureCombatSurfaceImage(Transform parent, string objectName, Color color, Sprite sprite = null)
     {
         Transform existing = parent.Find(objectName);
         GameObject imageObject = existing != null
@@ -1074,10 +1092,35 @@ public class MainTabController : MonoBehaviour
             image = imageObject.AddComponent<Image>();
         }
 
-        image.color = color;
+        if (sprite != null)
+        {
+            image.sprite = sprite;
+            image.type = sprite.border != Vector4.zero
+                ? Image.Type.Sliced
+                : Image.Type.Simple;
+            image.color = Color.white;
+            image.preserveAspect = false;
+        }
+        else
+        {
+            image.sprite = null;
+            image.type = Image.Type.Simple;
+            image.color = color;
+            image.preserveAspect = false;
+        }
+
         image.raycastTarget = false;
 
         return image;
+    }
+
+    private Sprite LoadPrototypeCombatSurfaceSprite(string assetPath)
+    {
+#if UNITY_EDITOR
+        return AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+#else
+        return null;
+#endif
     }
 
     private Text EnsureCombatSurfaceLabel(Transform parent, string objectName, string label, Vector2 anchorMin, Vector2 anchorMax, int fontSize)
@@ -1134,9 +1177,10 @@ public class MainTabController : MonoBehaviour
         }
 
         rectTransform.anchorMin = new Vector2(0.06f, 0.08f);
-        rectTransform.anchorMax = new Vector2(0.94f, 0.72f);
+        rectTransform.anchorMax = new Vector2(0.94f, 0.86f);
         rectTransform.offsetMin = Vector2.zero;
         rectTransform.offsetMax = Vector2.zero;
+        rectTransform.localScale = Vector3.one;
 
         HorizontalLayoutGroup layoutGroup = rowObject.GetComponent<HorizontalLayoutGroup>();
         if (layoutGroup == null)
@@ -1152,6 +1196,7 @@ public class MainTabController : MonoBehaviour
         layoutGroup.childForceExpandWidth = false;
         layoutGroup.childForceExpandHeight = false;
 
+        rowObject.transform.SetAsLastSibling();
         return rowObject.transform;
     }
 
