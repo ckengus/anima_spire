@@ -78,6 +78,8 @@ public class MainTabController : MonoBehaviour
     private AspectRatioFitter nonCombatPageBackgroundAspectFitter;
     private GameObject globalTabPlaceholderPanel;
     private GameObject heroScrollView;
+    private GameObject guildHubPlaceholderRoot;
+    private GameObject shopHubPlaceholderRoot;
     private Text globalTabPlaceholderTitle;
     private Text globalTabPlaceholderMessage;
     private GameObject modalDim;
@@ -96,6 +98,8 @@ public class MainTabController : MonoBehaviour
         EnsureCombatSurfaceLayout();
         EnsureTabContentPanel();
         EnsureHeroPlaceholderPanel();
+        EnsureGuildHubPlaceholderPanel();
+        EnsureShopHubPlaceholderPanel();
         EnsureEquipmentPanel();
         EnsureBottomMenuButtons();
         EnsureLaboratoryPanel();
@@ -126,6 +130,8 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(infoPanel, true);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(heroScrollView, false);
+        SetActiveIfPresent(guildHubPlaceholderRoot, false);
+        SetActiveIfPresent(shopHubPlaceholderRoot, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
@@ -162,6 +168,8 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, true);
         SetActiveIfPresent(heroScrollView, false);
+        SetActiveIfPresent(guildHubPlaceholderRoot, false);
+        SetActiveIfPresent(shopHubPlaceholderRoot, false);
         SetActiveIfPresent(equipmentPanel, true);
         laboratoryPanelController?.HidePanel();
         equipmentSynthesisPanelController?.HidePanel();
@@ -179,6 +187,8 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(heroScrollView, false);
+        SetActiveIfPresent(guildHubPlaceholderRoot, false);
+        SetActiveIfPresent(shopHubPlaceholderRoot, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         equipmentSynthesisPanelController?.HidePanel();
@@ -197,6 +207,8 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(heroScrollView, false);
+        SetActiveIfPresent(guildHubPlaceholderRoot, false);
+        SetActiveIfPresent(shopHubPlaceholderRoot, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
@@ -1600,6 +1612,8 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, true);
         SetActiveIfPresent(heroScrollView, true);
+        SetActiveIfPresent(guildHubPlaceholderRoot, false);
+        SetActiveIfPresent(shopHubPlaceholderRoot, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
@@ -1615,14 +1629,38 @@ public class MainTabController : MonoBehaviour
 
     private void ShowGuildTabPlaceholder()
     {
-        ShowGlobalTabPlaceholder(GlobalTabState.Guild, "\uD559\uD68C", "\uD559\uD68C \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
-        ShowPreparingModal();
+        ShowHubPlaceholder(GlobalTabState.Guild, EnsureGuildHubPlaceholderPanel);
     }
 
     private void ShowShopTabPlaceholder()
     {
-        ShowGlobalTabPlaceholder(GlobalTabState.Shop, "\uC0C1\uC810", "\uC0C1\uC810 \uD0ED\uC740 \uC784\uC2DC \uD45C\uC2DC \uC0C1\uD0DC\uC785\uB2C8\uB2E4.");
-        ShowPreparingModal();
+        ShowHubPlaceholder(GlobalTabState.Shop, EnsureShopHubPlaceholderPanel);
+    }
+
+    private void ShowHubPlaceholder(GlobalTabState tabState, System.Action ensureHubPanel)
+    {
+        currentEquipmentEntryContext = EquipmentEntryContext.None;
+        currentGlobalTabState = tabState;
+        ApplyGlobalTabSurfaceState();
+        HideGlobalTabPlaceholder();
+        ensureHubPanel?.Invoke();
+
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
+        SetActiveIfPresent(tabContentPanel, true);
+        SetActiveIfPresent(heroScrollView, false);
+        SetActiveIfPresent(guildHubPlaceholderRoot, tabState == GlobalTabState.Guild);
+        SetActiveIfPresent(shopHubPlaceholderRoot, tabState == GlobalTabState.Shop);
+        SetActiveIfPresent(equipmentPanel, false);
+        equipmentPanelController?.HidePanel();
+        laboratoryPanelController?.HidePanel();
+        equipmentSynthesisPanelController?.HidePanel();
+
+        GameObject hubRoot = tabState == GlobalTabState.Guild
+            ? guildHubPlaceholderRoot
+            : shopHubPlaceholderRoot;
+        hubRoot?.transform.SetAsLastSibling();
+        SetBottomMenuAsLastSibling();
     }
 
     public void ShowPreparingModal()
@@ -1668,6 +1706,8 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(heroScrollView, false);
+        SetActiveIfPresent(guildHubPlaceholderRoot, false);
+        SetActiveIfPresent(shopHubPlaceholderRoot, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
@@ -2159,6 +2199,168 @@ public class MainTabController : MonoBehaviour
         EnsureHeroActionArea(content);
 
         heroScrollView.SetActive(false);
+    }
+
+    private void EnsureGuildHubPlaceholderPanel()
+    {
+        string[] titles =
+        {
+            "\uCD9C\uC11D\uCCB4\uD06C",
+            "\uD559\uD68C\uC6D0 \uBA85\uB2E8",
+            "\uD559\uD68C \uBBF8\uC158",
+            "\uD559\uD68C \uC0C1\uC810",
+            "\uACF5\uD5CC \uBCF4\uC0C1",
+            "\uD559\uD68C \uAE30\uB85D"
+        };
+        string[] descriptions =
+        {
+            "\uD558\uB8E8 \uD55C \uBC88 \uCC38\uC5EC\uD558\uB294 \uD559\uD68C \uCD9C\uC11D \uBCF4\uC0C1",
+            "\uD559\uD68C\uC6D0 \uC815\uBCF4\uC640 \uD65C\uB3D9 \uC0C1\uD0DC",
+            "\uD559\uD68C \uACF5\uB3D9 \uBAA9\uD45C\uC640 \uC9C4\uD589 \uD604\uD669",
+            "\uD559\uD68C \uD65C\uB3D9\uC73C\uB85C \uC5BB\uB294 \uAD50\uD658 \uD488\uBAA9",
+            "\uACF5\uD5CC\uB3C4 \uB204\uC801 \uBCF4\uC0C1",
+            "\uD559\uD68C \uD65C\uB3D9 \uC774\uB825\uACFC \uC54C\uB9BC"
+        };
+
+        guildHubPlaceholderRoot = EnsureHubPlaceholderPanel(
+            "GO_GuildHubPlaceholderRoot",
+            "\uD559\uD68C / \uAE38\uB4DC",
+            "\uD559\uD68C \uD65C\uB3D9 \uD5C8\uBE0C\uC785\uB2C8\uB2E4. \uAC1C\uBCC4 \uAE30\uB2A5\uC740 \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4.",
+            titles,
+            descriptions);
+    }
+
+    private void EnsureShopHubPlaceholderPanel()
+    {
+        string[] titles =
+        {
+            "\uC77C\uC77C \uC0C1\uD488",
+            "\uCD94\uCC9C \uC0C1\uD488",
+            "\uC7AC\uD654 \uAD50\uD658",
+            "\uD328\uD0A4\uC9C0"
+        };
+        string[] descriptions =
+        {
+            "\uB9E4\uC77C \uAC31\uC2E0\uB420 \uC608\uC815\uC758 \uC0C1\uD488 \uBAA9\uB85D",
+            "\uD604\uC7AC \uC131\uC7A5 \uAD6C\uAC04\uC5D0 \uB9DE\uB294 \uCD94\uCC9C \uD488\uBAA9",
+            "\uC7AC\uD654\uB97C \uB2E4\uB978 \uC790\uC6D0\uC73C\uB85C \uAD50\uD658",
+            "\uD328\uD0A4\uC9C0 \uC0C1\uD488\uACFC \uD2B9\uBCC4 \uAD6C\uC131"
+        };
+
+        shopHubPlaceholderRoot = EnsureHubPlaceholderPanel(
+            "GO_ShopHubPlaceholderRoot",
+            "\uC0C1\uC810",
+            "\uC0C1\uD488 \uCE74\uD14C\uACE0\uB9AC \uD5C8\uBE0C\uC785\uB2C8\uB2E4. \uAD6C\uB9E4 \uAE30\uB2A5\uC740 \uC544\uC9C1 \uC5F0\uACB0\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.",
+            titles,
+            descriptions);
+    }
+
+    private GameObject EnsureHubPlaceholderPanel(string objectName, string title, string description, string[] cardTitles, string[] cardDescriptions)
+    {
+        EnsureTabContentPanel();
+
+        Transform existing = tabContentPanel.transform.Find(objectName);
+        GameObject rootObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        rootObject.transform.SetParent(tabContentPanel.transform, false);
+        StretchToParent(rootObject.GetComponent<RectTransform>());
+
+        Image image = rootObject.GetComponent<Image>();
+        image.color = new Color(0.035f, 0.045f, 0.06f, 0.28f);
+        image.raycastTarget = false;
+
+        ClearChildren(rootObject.transform);
+        CreateHubHeader(rootObject.transform, title, description);
+        CreateHubCardGrid(rootObject.transform, cardTitles, cardDescriptions);
+        CreateHubNotice(rootObject.transform);
+
+        rootObject.SetActive(false);
+        return rootObject;
+    }
+
+    private void CreateHubHeader(Transform root, string title, string description)
+    {
+        GameObject header = CreateHubArea(root, "HubHeaderArea", new Vector2(0.06f, 0.78f), new Vector2(0.94f, 0.96f), new Color(0.05f, 0.07f, 0.1f, 0.58f));
+        CreateHeroText(header.transform, "HubTitle", title, new Vector2(0.04f, 0.45f), new Vector2(0.96f, 0.9f), 30, TextAnchor.MiddleLeft);
+        CreateHeroText(header.transform, "HubDescription", description, new Vector2(0.04f, 0.12f), new Vector2(0.96f, 0.46f), 18, TextAnchor.MiddleLeft);
+    }
+
+    private void CreateHubCardGrid(Transform root, string[] cardTitles, string[] cardDescriptions)
+    {
+        GameObject grid = CreateHubArea(root, "HubCardGridArea", new Vector2(0.06f, 0.22f), new Vector2(0.94f, 0.76f), new Color(0f, 0f, 0f, 0f));
+
+        for (int i = 0; i < cardTitles.Length; i++)
+        {
+            int column = i % 2;
+            int row = i / 2;
+            int rowCount = Mathf.CeilToInt(cardTitles.Length / 2f);
+            float rowHeight = 1f / Mathf.Max(1, rowCount);
+            float xMin = column == 0 ? 0f : 0.515f;
+            float xMax = column == 0 ? 0.485f : 1f;
+            float yMax = 1f - (row * rowHeight);
+            float yMin = yMax - rowHeight + 0.04f;
+
+            CreateHubCard(
+                grid.transform,
+                $"HubFeatureCard_{i:00}",
+                cardTitles[i],
+                cardDescriptions[i],
+                new Vector2(xMin, yMin),
+                new Vector2(xMax, yMax - 0.02f));
+        }
+    }
+
+    private void CreateHubNotice(Transform root)
+    {
+        GameObject notice = CreateHubArea(root, "HubNoticeArea", new Vector2(0.06f, 0.08f), new Vector2(0.94f, 0.2f), new Color(0.05f, 0.055f, 0.075f, 0.62f));
+        CreateHeroText(notice.transform, "NoticeTitle", "\uC900\uBE44 \uC911", new Vector2(0.04f, 0.48f), new Vector2(0.96f, 0.88f), 20, TextAnchor.MiddleLeft);
+        CreateHeroText(notice.transform, "NoticeBody", "\uCE74\uB4DC\uB97C \uB204\uB974\uBA74 \uAE30\uC874 \uC900\uBE44\uC911 \uC548\uB0B4\uAC00 \uD45C\uC2DC\uB429\uB2C8\uB2E4.", new Vector2(0.04f, 0.12f), new Vector2(0.96f, 0.52f), 16, TextAnchor.MiddleLeft);
+    }
+
+    private GameObject CreateHubArea(Transform parent, string objectName, Vector2 anchorMin, Vector2 anchorMax, Color color)
+    {
+        GameObject areaObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        areaObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = areaObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = anchorMin;
+        rectTransform.anchorMax = anchorMax;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image image = areaObject.GetComponent<Image>();
+        image.color = color;
+        image.raycastTarget = false;
+
+        return areaObject;
+    }
+
+    private void CreateHubCard(Transform parent, string objectName, string title, string description, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        GameObject cardObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        cardObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = cardObject.GetComponent<RectTransform>();
+        rectTransform.anchorMin = anchorMin;
+        rectTransform.anchorMax = anchorMax;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image image = cardObject.GetComponent<Image>();
+        image.color = new Color(0.085f, 0.105f, 0.14f, 0.88f);
+        image.raycastTarget = true;
+
+        Button button = cardObject.GetComponent<Button>();
+        button.targetGraphic = image;
+        button.interactable = true;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(ShowPreparingModal);
+
+        CreateHeroImage(cardObject.transform, "IconPlaceholder", new Vector2(0.06f, 0.28f), new Vector2(0.24f, 0.76f), new Color(0.22f, 0.26f, 0.32f, 0.72f));
+        CreateHeroText(cardObject.transform, "CardTitle", title, new Vector2(0.3f, 0.58f), new Vector2(0.94f, 0.86f), 20, TextAnchor.MiddleLeft);
+        CreateHeroText(cardObject.transform, "CardDescription", description, new Vector2(0.3f, 0.24f), new Vector2(0.94f, 0.58f), 15, TextAnchor.MiddleLeft);
+        CreateHeroText(cardObject.transform, "CardStatus", "\uC900\uBE44\uC911", new Vector2(0.62f, 0.04f), new Vector2(0.94f, 0.22f), 14, TextAnchor.MiddleRight);
     }
 
     private RectTransform EnsureHeroViewport(Transform parent)
