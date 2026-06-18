@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainTabController : MonoBehaviour
@@ -74,6 +73,11 @@ public class MainTabController : MonoBehaviour
     private Image nonCombatPageBackgroundImage;
     private AspectRatioFitter nonCombatPageBackgroundAspectFitter;
     private GameObject globalTabPlaceholderPanel;
+    private GameObject combatPage;
+    private GameObject heroPage;
+    private GameObject laboratoryPage;
+    private GameObject guildPage;
+    private GameObject shopPage;
     private GameObject heroScrollView;
     private GameObject guildHubPlaceholderRoot;
     private GameObject shopHubPlaceholderRoot;
@@ -88,6 +92,7 @@ public class MainTabController : MonoBehaviour
     {
         EnsureReferences();
         EnsureGlobalFrameHierarchy();
+        EnsureGlobalPageRoots();
         EnsureGlobalTabSurfaceRoot();
         EnsureEventSystem();
         EnsureEquipmentManager();
@@ -124,6 +129,7 @@ public class MainTabController : MonoBehaviour
     {
         currentEquipmentEntryContext = EquipmentEntryContext.None;
         currentGlobalTabState = GlobalTabState.Combat;
+        ShowGlobalPage(GlobalTabState.Combat);
         ApplyGlobalTabSurfaceState();
         HideGlobalTabPlaceholder();
         SetActiveIfPresent(combatPanel, true);
@@ -277,7 +283,7 @@ public class MainTabController : MonoBehaviour
 
     private Transform FindSceneDescendantByName(string objectName)
     {
-        Scene scene = gameObject.scene;
+        UnityEngine.SceneManagement.Scene scene = gameObject.scene;
         if (!scene.IsValid())
         {
             return null;
@@ -441,6 +447,101 @@ public class MainTabController : MonoBehaviour
         SetGlobalFrameSiblingOrder();
     }
 
+    private void EnsureGlobalPageRoots()
+    {
+        Transform pageRoot = FindPageRoot();
+        if (pageRoot == null)
+        {
+            return;
+        }
+
+        combatPage = EnsurePageRoot(pageRoot, "CombatPage");
+        heroPage = EnsurePageRoot(pageRoot, "HeroPage");
+        laboratoryPage = EnsurePageRoot(pageRoot, "LaboratoryPage");
+        guildPage = EnsurePageRoot(pageRoot, "GuildPage");
+        shopPage = EnsurePageRoot(pageRoot, "ShopPage");
+
+        ParentIfPresent("CombatContentArea", combatPage.transform);
+        ParentIfPresent("MainContentArea", heroPage.transform);
+
+        EnsureSimplePlaceholder(heroPage.transform, "\uC601\uC6C5", "\uC900\uBE44\uC911");
+        EnsureSimplePlaceholder(laboratoryPage.transform, "\uC5F0\uAD6C\uC2E4", "034B\uC5D0\uC11C \uAE30\uC874 \uC5F0\uAD6C\uC2E4 \uAE30\uB2A5 \uD1B5\uD569 \uC608\uC815");
+        EnsureSimplePlaceholder(guildPage.transform, "\uD559\uD68C", "\uC900\uBE44\uC911");
+        EnsureSimplePlaceholder(shopPage.transform, "\uC0C1\uC810", "\uC900\uBE44\uC911");
+
+        ShowGlobalPage(GlobalTabState.Combat);
+    }
+
+    private GameObject EnsurePageRoot(Transform parent, string objectName)
+    {
+        Transform existing = parent.Find(objectName);
+        GameObject pageObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform));
+
+        pageObject.transform.SetParent(parent, false);
+        pageObject.layer = parent.gameObject.layer;
+        StretchToParent(pageObject.GetComponent<RectTransform>());
+        return pageObject;
+    }
+
+    private void EnsureSimplePlaceholder(Transform pageRoot, string title, string message)
+    {
+        const string panelName = "PlaceholderPanel";
+
+        Transform existingPanel = pageRoot.Find(panelName);
+        GameObject panel = existingPanel != null
+            ? existingPanel.gameObject
+            : new GameObject(panelName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+
+        panel.transform.SetParent(pageRoot, false);
+        StretchToParent(panel.GetComponent<RectTransform>());
+
+        Image image = panel.GetComponent<Image>();
+        image.color = new Color(0.035f, 0.045f, 0.06f, 0.92f);
+        image.raycastTarget = false;
+
+        Text titleText = EnsurePlaceholderText(
+            panel.transform,
+            "PlaceholderTitle",
+            new Vector2(0.08f, 0.52f),
+            new Vector2(0.92f, 0.64f),
+            34,
+            TextAnchor.LowerCenter);
+        titleText.text = title;
+
+        Text messageText = EnsurePlaceholderText(
+            panel.transform,
+            "PlaceholderMessage",
+            new Vector2(0.08f, 0.4f),
+            new Vector2(0.92f, 0.52f),
+            22,
+            TextAnchor.UpperCenter);
+        messageText.text = message;
+    }
+
+    private void ShowGlobalPage(GlobalTabState tabState)
+    {
+        EnsureGlobalPageRootsIfMissing();
+
+        SetActiveIfPresent(combatPage, tabState == GlobalTabState.Combat);
+        SetActiveIfPresent(heroPage, tabState == GlobalTabState.Hero);
+        SetActiveIfPresent(laboratoryPage, tabState == GlobalTabState.Laboratory);
+        SetActiveIfPresent(guildPage, tabState == GlobalTabState.Guild);
+        SetActiveIfPresent(shopPage, tabState == GlobalTabState.Shop);
+
+        currentGlobalTabState = tabState;
+        ApplyGlobalTabSelectionVisuals();
+    }
+
+    private void EnsureGlobalPageRootsIfMissing()
+    {
+        if (combatPage == null || heroPage == null || laboratoryPage == null || guildPage == null || shopPage == null)
+        {
+            EnsureGlobalPageRoots();
+        }
+    }
+
     private Transform EnsureFrameRoot(Transform parent, string objectName)
     {
         Transform existing = FindSceneDescendantByName(objectName);
@@ -580,6 +681,7 @@ public class MainTabController : MonoBehaviour
     private void ApplyGlobalTabSurfaceState()
     {
         EnsureGlobalTabSurfaceRootIfMissing();
+        ApplyGlobalTabSelectionVisuals();
 
         if (globalTabSurfaceRoot == null || nonCombatPageBackgroundImage == null)
         {
@@ -1397,13 +1499,14 @@ public class MainTabController : MonoBehaviour
         EnsureTabBarBackground(bottomGlobalTabArea.transform);
         Transform iconRow = EnsureGlobalTabIconRow(bottomGlobalTabArea.transform);
         DisableGlobalTabSpacers(iconRow);
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Combat", "Label_Combat", globalTabCombatIconSprite, 0.14f, ShowBattle);
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Hero", "Label_Hero", globalTabHeroIconSprite, 0.32f, ShowHeroTabPlaceholder);
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Laboratory", "Label_Laboratory", globalTabLaboratoryIconSprite, 0.5f, ShowLaboratory);
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Guild", "Label_Guild", globalTabGuildIconSprite, 0.68f, ShowGuildTabPlaceholder);
-        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Shop", "Label_Shop", globalTabShopIconSprite, 0.86f, ShowShopTabPlaceholder);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Combat", "Label_Combat", "\uC804\uD22C", globalTabCombatIconSprite, 0.14f, ShowBattle);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Hero", "Label_Hero", "\uC601\uC6C5", globalTabHeroIconSprite, 0.32f, ShowHeroTabPlaceholder);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Laboratory", "Label_Laboratory", "\uC5F0\uAD6C\uC2E4", globalTabLaboratoryIconSprite, 0.5f, ShowLaboratoryTabPlaceholder);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Guild", "Label_Guild", "\uD559\uD68C", globalTabGuildIconSprite, 0.68f, ShowGuildTabPlaceholder);
+        EnsureGlobalTabCard(iconRow, "GlobalTabCard_Shop", "Label_Shop", "\uC0C1\uC810", globalTabShopIconSprite, 0.86f, ShowShopTabPlaceholder);
 
         iconRow.SetAsLastSibling();
+        ApplyGlobalTabSelectionVisuals();
         SetBottomMenuAsLastSibling();
     }
 
@@ -1488,7 +1591,7 @@ public class MainTabController : MonoBehaviour
         }
     }
 
-    private Button EnsureGlobalTabCard(Transform parent, string objectName, string labelObjectName, Sprite iconSprite, float anchorX, UnityEngine.Events.UnityAction onClick)
+    private Button EnsureGlobalTabCard(Transform parent, string objectName, string labelObjectName, string label, Sprite iconSprite, float anchorX, UnityEngine.Events.UnityAction onClick)
     {
         Transform existing = parent.Find(objectName);
         bool isNewObject = existing == null;
@@ -1533,7 +1636,7 @@ public class MainTabController : MonoBehaviour
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(onClick);
 
-        HideGlobalTabLabel(buttonObject.transform, labelObjectName);
+        EnsureGlobalTabLabel(buttonObject.transform, labelObjectName, label);
 
         return button;
     }
@@ -1569,25 +1672,29 @@ public class MainTabController : MonoBehaviour
 
     private Text EnsureGlobalTabLabel(Transform buttonTransform, string objectName, string label)
     {
-        GameObject textObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        Transform existing = buttonTransform.Find(objectName);
+        GameObject textObject = existing != null
+            ? existing.gameObject
+            : new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
         textObject.transform.SetParent(buttonTransform, false);
 
         RectTransform rectTransform = textObject.GetComponent<RectTransform>();
-        rectTransform.anchorMin = Vector2.zero;
-        rectTransform.anchorMax = Vector2.one;
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
+        rectTransform.anchorMin = new Vector2(0f, 0f);
+        rectTransform.anchorMax = new Vector2(1f, 0.36f);
+        rectTransform.offsetMin = new Vector2(0f, 0f);
+        rectTransform.offsetMax = new Vector2(0f, 0f);
 
         Text text = textObject.GetComponent<Text>();
         text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = 18;
+        text.fontSize = 16;
         text.resizeTextForBestFit = true;
-        text.resizeTextMinSize = 12;
-        text.resizeTextMaxSize = 18;
+        text.resizeTextMinSize = 10;
+        text.resizeTextMaxSize = 16;
         text.alignment = TextAnchor.MiddleCenter;
         text.color = Color.white;
         text.raycastTarget = false;
         text.text = label;
+        textObject.SetActive(true);
 
         return text;
     }
@@ -1596,26 +1703,40 @@ public class MainTabController : MonoBehaviour
     {
         currentEquipmentEntryContext = EquipmentEntryContext.None;
         currentGlobalTabState = GlobalTabState.Hero;
+        ShowGlobalPage(GlobalTabState.Hero);
         ApplyGlobalTabSurfaceState();
         HideGlobalTabPlaceholder();
-        EnsureHeroPlaceholderPanel();
         SetActiveIfPresent(combatPanel, false);
         SetActiveIfPresent(infoPanel, false);
-        SetActiveIfPresent(tabContentPanel, true);
-        SetActiveIfPresent(heroScrollView, true);
+        SetActiveIfPresent(tabContentPanel, false);
+        SetActiveIfPresent(heroScrollView, false);
         SetActiveIfPresent(guildHubPlaceholderRoot, false);
         SetActiveIfPresent(shopHubPlaceholderRoot, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
         equipmentSynthesisPanelController?.HidePanel();
-        heroScrollView.transform.SetAsLastSibling();
         SetBottomMenuAsLastSibling();
     }
 
     private void ShowLaboratoryTabPlaceholder()
     {
-        ShowLaboratory();
+        currentEquipmentEntryContext = EquipmentEntryContext.None;
+        currentGlobalTabState = GlobalTabState.Laboratory;
+        ShowGlobalPage(GlobalTabState.Laboratory);
+        ApplyGlobalTabSurfaceState();
+        HideGlobalTabPlaceholder();
+        SetActiveIfPresent(combatPanel, false);
+        SetActiveIfPresent(infoPanel, false);
+        SetActiveIfPresent(tabContentPanel, false);
+        SetActiveIfPresent(heroScrollView, false);
+        SetActiveIfPresent(guildHubPlaceholderRoot, false);
+        SetActiveIfPresent(shopHubPlaceholderRoot, false);
+        SetActiveIfPresent(equipmentPanel, false);
+        equipmentPanelController?.HidePanel();
+        laboratoryPanelController?.HidePanel();
+        equipmentSynthesisPanelController?.HidePanel();
+        SetBottomMenuAsLastSibling();
     }
 
     private void ShowGuildTabPlaceholder()
@@ -1632,26 +1753,60 @@ public class MainTabController : MonoBehaviour
     {
         currentEquipmentEntryContext = EquipmentEntryContext.None;
         currentGlobalTabState = tabState;
+        ShowGlobalPage(tabState);
         ApplyGlobalTabSurfaceState();
         HideGlobalTabPlaceholder();
-        ensureHubPanel?.Invoke();
 
         SetActiveIfPresent(combatPanel, false);
         SetActiveIfPresent(infoPanel, false);
-        SetActiveIfPresent(tabContentPanel, true);
+        SetActiveIfPresent(tabContentPanel, false);
         SetActiveIfPresent(heroScrollView, false);
-        SetActiveIfPresent(guildHubPlaceholderRoot, tabState == GlobalTabState.Guild);
-        SetActiveIfPresent(shopHubPlaceholderRoot, tabState == GlobalTabState.Shop);
+        SetActiveIfPresent(guildHubPlaceholderRoot, false);
+        SetActiveIfPresent(shopHubPlaceholderRoot, false);
         SetActiveIfPresent(equipmentPanel, false);
         equipmentPanelController?.HidePanel();
         laboratoryPanelController?.HidePanel();
         equipmentSynthesisPanelController?.HidePanel();
 
-        GameObject hubRoot = tabState == GlobalTabState.Guild
-            ? guildHubPlaceholderRoot
-            : shopHubPlaceholderRoot;
-        hubRoot?.transform.SetAsLastSibling();
         SetBottomMenuAsLastSibling();
+    }
+
+    private void ApplyGlobalTabSelectionVisuals()
+    {
+        SetGlobalTabCardVisual("GlobalTabCard_Combat", currentGlobalTabState == GlobalTabState.Combat);
+        SetGlobalTabCardVisual("GlobalTabCard_Hero", currentGlobalTabState == GlobalTabState.Hero);
+        SetGlobalTabCardVisual("GlobalTabCard_Laboratory", currentGlobalTabState == GlobalTabState.Laboratory);
+        SetGlobalTabCardVisual("GlobalTabCard_Guild", currentGlobalTabState == GlobalTabState.Guild);
+        SetGlobalTabCardVisual("GlobalTabCard_Shop", currentGlobalTabState == GlobalTabState.Shop);
+    }
+
+    private void SetGlobalTabCardVisual(string objectName, bool isSelected)
+    {
+        Transform cardTransform = FindSceneDescendantByName(objectName);
+        if (cardTransform == null)
+        {
+            return;
+        }
+
+        Image image = cardTransform.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = isSelected
+                ? new Color(1f, 0.96f, 0.72f, 1f)
+                : new Color(1f, 1f, 1f, 0.56f);
+        }
+
+        for (int i = 0; i < cardTransform.childCount; i++)
+        {
+            Text label = cardTransform.GetChild(i).GetComponent<Text>();
+            if (label != null)
+            {
+                label.color = isSelected
+                    ? new Color(1f, 0.94f, 0.58f, 1f)
+                    : new Color(0.78f, 0.82f, 0.9f, 0.9f);
+                label.gameObject.SetActive(true);
+            }
+        }
     }
 
     public void ShowPreparingModal()
