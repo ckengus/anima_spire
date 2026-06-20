@@ -162,10 +162,13 @@ public class MainTabController : MonoBehaviour
         if (entryContext == EquipmentEntryContext.HeroTab)
         {
             currentGlobalTabState = GlobalTabState.Hero;
+            ShowGlobalPage(GlobalTabState.Hero);
         }
         else if (entryContext == EquipmentEntryContext.LaboratoryWardrobe)
         {
             currentGlobalTabState = GlobalTabState.Laboratory;
+            ShowGlobalPage(GlobalTabState.Laboratory);
+            HideLaboratoryPagePlaceholder();
         }
 
         ApplyGlobalTabSurfaceState();
@@ -179,6 +182,10 @@ public class MainTabController : MonoBehaviour
         SetActiveIfPresent(equipmentPanel, true);
         laboratoryPanelController?.HidePanel();
         equipmentSynthesisPanelController?.HidePanel();
+
+        EnsureEquipmentPanel();
+        SetActiveIfPresent(equipmentPanel, true);
+        equipmentPanel.transform.SetAsLastSibling();
         equipmentPanelController?.ShowPanel();
         SetBottomMenuAsLastSibling();
     }
@@ -187,8 +194,10 @@ public class MainTabController : MonoBehaviour
     {
         currentEquipmentEntryContext = EquipmentEntryContext.None;
         currentGlobalTabState = GlobalTabState.Laboratory;
+        ShowGlobalPage(GlobalTabState.Laboratory);
         ApplyGlobalTabSurfaceState();
         HideGlobalTabPlaceholder();
+        HideLaboratoryPagePlaceholder();
         SetActiveIfPresent(combatPanel, false);
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
@@ -207,8 +216,10 @@ public class MainTabController : MonoBehaviour
     public void ShowSynthesisRoom()
     {
         currentGlobalTabState = GlobalTabState.Laboratory;
+        ShowGlobalPage(GlobalTabState.Laboratory);
         ApplyGlobalTabSurfaceState();
         HideGlobalTabPlaceholder();
+        HideLaboratoryPagePlaceholder();
         SetActiveIfPresent(combatPanel, false);
         SetActiveIfPresent(infoPanel, false);
         SetActiveIfPresent(tabContentPanel, false);
@@ -1721,22 +1732,7 @@ public class MainTabController : MonoBehaviour
 
     private void ShowLaboratoryTabPlaceholder()
     {
-        currentEquipmentEntryContext = EquipmentEntryContext.None;
-        currentGlobalTabState = GlobalTabState.Laboratory;
-        ShowGlobalPage(GlobalTabState.Laboratory);
-        ApplyGlobalTabSurfaceState();
-        HideGlobalTabPlaceholder();
-        SetActiveIfPresent(combatPanel, false);
-        SetActiveIfPresent(infoPanel, false);
-        SetActiveIfPresent(tabContentPanel, false);
-        SetActiveIfPresent(heroScrollView, false);
-        SetActiveIfPresent(guildHubPlaceholderRoot, false);
-        SetActiveIfPresent(shopHubPlaceholderRoot, false);
-        SetActiveIfPresent(equipmentPanel, false);
-        equipmentPanelController?.HidePanel();
-        laboratoryPanelController?.HidePanel();
-        equipmentSynthesisPanelController?.HidePanel();
-        SetBottomMenuAsLastSibling();
+        ShowLaboratory();
     }
 
     private void ShowGuildTabPlaceholder()
@@ -2897,17 +2893,30 @@ public class MainTabController : MonoBehaviour
             equipmentPanel = CreateEquipmentPanel();
         }
 
-        equipmentPanel.transform.SetParent(tabContentPanel.transform, false);
+        Transform equipmentParent = FindEquipmentPanelParent();
+        if (equipmentPanel.transform.parent != equipmentParent)
+        {
+            equipmentPanel.transform.SetParent(equipmentParent, false);
+        }
+
         equipmentPanel.transform.SetAsLastSibling();
         equipmentPanelRectTransform = equipmentPanel.GetComponent<RectTransform>();
-        ApplyTabContentSafeAreaOffset();
+        if (equipmentParent == FindPageRoot())
+        {
+            ApplyAnchors(equipmentPanel, new Vector2(0f, BottomMenuRatio), Vector2.one);
+        }
+        else
+        {
+            ApplyTabContentSafeAreaOffset();
+        }
+
         EnsureEquipmentPanelController();
     }
 
     private GameObject CreateEquipmentPanel()
     {
         GameObject panelObject = new GameObject("EquipmentPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        panelObject.transform.SetParent(tabContentPanel.transform, false);
+        panelObject.transform.SetParent(FindEquipmentPanelParent(), false);
 
         RectTransform rectTransform = panelObject.GetComponent<RectTransform>();
         rectTransform.anchorMin = Vector2.zero;
@@ -2920,6 +2929,17 @@ public class MainTabController : MonoBehaviour
         image.raycastTarget = true;
 
         return panelObject;
+    }
+
+    private Transform FindEquipmentPanelParent()
+    {
+        Transform pageRoot = FindPageRoot();
+        if (pageRoot != null)
+        {
+            return pageRoot;
+        }
+
+        return tabContentPanel != null ? tabContentPanel.transform : FindTabContentParent();
     }
 
     private void ApplyTabContentSafeAreaOffset()
@@ -2955,7 +2975,7 @@ public class MainTabController : MonoBehaviour
             controller = equipmentPanel.AddComponent<HeroEquipmentPanelUI>();
         }
 
-        controller.SetEquipmentRootTarget(equipmentRootTarget);
+        controller.SetEquipmentRootTarget(equipmentPanel.transform);
         controller.SetPopupRootTarget(FindPopupOverlay());
         controller.SetEquipmentManager(equipmentManager);
         equipmentPanelController = controller;
@@ -2964,17 +2984,29 @@ public class MainTabController : MonoBehaviour
 
     private void EnsureLaboratoryPanel()
     {
+        Transform laboratoryRoot = EnsureLaboratoryPageRoot();
         Transform mainContentArea = EnsureMainContentArea();
 
         if (laboratoryPanel == null)
         {
-            Transform existing = mainContentArea.Find("LaboratoryPanel");
+            Transform existing = laboratoryRoot != null
+                ? laboratoryRoot.Find("LaboratoryPanel")
+                : null;
+            if (existing == null)
+            {
+                existing = mainContentArea.Find("LaboratoryPanel");
+            }
+
             laboratoryPanel = existing != null
                 ? existing.gameObject
                 : new GameObject("LaboratoryPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         }
 
-        laboratoryPanel.transform.SetParent(mainContentArea, false);
+        if (laboratoryRoot != null && laboratoryPanel.transform.parent != laboratoryRoot)
+        {
+            laboratoryPanel.transform.SetParent(laboratoryRoot, false);
+        }
+
         StretchToParent(laboratoryPanel.GetComponent<RectTransform>());
 
         Image image = laboratoryPanel.GetComponent<Image>();
@@ -2997,17 +3029,29 @@ public class MainTabController : MonoBehaviour
 
     private void EnsureEquipmentSynthesisPanel()
     {
+        Transform laboratoryRoot = EnsureLaboratoryPageRoot();
         Transform mainContentArea = EnsureMainContentArea();
 
         if (equipmentSynthesisPanel == null)
         {
-            Transform existing = mainContentArea.Find("EquipmentSynthesisPanel");
+            Transform existing = laboratoryRoot != null
+                ? laboratoryRoot.Find("EquipmentSynthesisPanel")
+                : null;
+            if (existing == null)
+            {
+                existing = mainContentArea.Find("EquipmentSynthesisPanel");
+            }
+
             equipmentSynthesisPanel = existing != null
                 ? existing.gameObject
                 : new GameObject("EquipmentSynthesisPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         }
 
-        equipmentSynthesisPanel.transform.SetParent(mainContentArea, false);
+        if (laboratoryRoot != null && equipmentSynthesisPanel.transform.parent != laboratoryRoot)
+        {
+            equipmentSynthesisPanel.transform.SetParent(laboratoryRoot, false);
+        }
+
         StretchToParent(equipmentSynthesisPanel.GetComponent<RectTransform>());
 
         Image image = equipmentSynthesisPanel.GetComponent<Image>();
@@ -3025,6 +3069,21 @@ public class MainTabController : MonoBehaviour
         controller.SetCallbacks(HandleEquipmentSynthesisClicked);
         equipmentSynthesisPanelController = controller;
         equipmentSynthesisPanelController.HidePanel();
+    }
+
+    private Transform EnsureLaboratoryPageRoot()
+    {
+        EnsureGlobalPageRootsIfMissing();
+        return laboratoryPage != null ? laboratoryPage.transform : null;
+    }
+
+    private void HideLaboratoryPagePlaceholder()
+    {
+        Transform laboratoryRoot = EnsureLaboratoryPageRoot();
+        Transform placeholder = laboratoryRoot != null
+            ? laboratoryRoot.Find("PlaceholderPanel")
+            : null;
+        placeholder?.gameObject.SetActive(false);
     }
 
     private void HandleEquipmentSynthesisClicked()
